@@ -1,0 +1,11 @@
+val a = 1
+val b = 2
+val c = 1
+
+if a == c {
+    print 'x'
+}
+
+if a == b {
+    print 'x'
+}
