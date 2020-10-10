@@ -35,6 +35,9 @@ const TType = {
   _false: 16,
   print: 17,
   scan: 18,
+  semi: 20,
+  lparen: 21,
+  rparen: 22,
 };
 
 function isAlpha(c) {
@@ -106,6 +109,13 @@ function tfTokenize(source) {
         pushToken(TType.greater);
         break;
       case ";":
+        pushToken(TType.semi);
+        break;
+      case "(":
+        pushToken(TType.lparen);
+        break;
+      case ")":
+        pushToken(TType.rparen);
         break;
       case "'":
         if (eof()) throw new Error("Unterminated character literal.");
@@ -196,9 +206,17 @@ class IRCompiler {
     return this.next();
   }
 
+  prev() {
+    return this.tokens[this.current - 1];
+  }
+
   emit(...opcodes) {
     opcodes.forEach((op) => this.ir.push(op));
   }
+
+  pushScope() {}
+
+  popScope() {}
 
   // recursive descent parsing
 
@@ -214,9 +232,15 @@ class IRCompiler {
       this.varDecl();
     } else if (this.matchToken(TType.print)) {
       this.printStmt();
+    } else if (this.matchToken(TType._if)) {
+      this.ifStmt();
     } else {
-      throw new Error("Unhandled token in compiler.");
+      // expression statements
+      this.expression();
+      this.emit(IR.pop_);
     }
+
+    this.matchToken(TType.semi);
   }
 
   varDecl() {
@@ -234,18 +258,50 @@ class IRCompiler {
     this.emit(IR.print);
   }
 
+  ifStmt() {
+    this.expression();
+    this.emit(IR.do_if);
+    this.statement();
+    this.emit(IR.close_if_body);
+
+    if (this.matchToken(TType._else)) {
+      this.emit(IR.start_else);
+      this.statement();
+      this.emit(IR.end_else);
+    }
+
+    this.emit(IR.end_if);
+  }
+
   expression() {
+    this.comparison();
+  }
+
+  comparison() {
     this.add();
+    while (this.matchToken(TType.eqeq)) {
+      this.add();
+      this.emit(IR.equals);
+    }
   }
 
   add() {
-    this.literal();
-    if (this.matchToken(TType.plus, TType.minus)) {
-      this.literal();
-      this.emit(IR.add);
-    }    
+    this.grouping();
+    while (this.matchToken(TType.plus, TType.minus)) {
+      let op = this.prev().type == TType.plus ? IR.add : IR.sub;
+      this.grouping();
+      this.emit(op);
+    }
   }
 
+  grouping() {
+    if (this.matchToken(TType.lparen)) {
+      expr = this.expression();
+      this.expect(TType.rparen, "Expected ')'.");
+    }
+
+    this.literal();
+  }
 
   literal() {
     const token = this.next();
@@ -259,6 +315,8 @@ class IRCompiler {
       this.emit(IR.true_);
     } else if (token.type == TType.char) {
       this.emit(IR.val, token.value.charCodeAt(1));
+    } else {
+      throw new Error("Unhandled token in compiler.");
     }
   }
 }
