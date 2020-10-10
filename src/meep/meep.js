@@ -33,6 +33,8 @@ const TType = {
   minusminus: 14,
   _true: 15,
   _false: 16,
+  print: 17,
+  scan: 18,
 };
 
 function isAlpha(c) {
@@ -52,6 +54,7 @@ const tfKeywords = new Map([
   ["else", TType._else],
   ["true", TType._true],
   ["false", TType._false],
+  ["print", TType.print],
 ]);
 
 function tfTokenize(source) {
@@ -132,14 +135,13 @@ function tfTokenize(source) {
   return tokens;
 }
 
-
 // Intermediate Representation
 
 // I'm being lazy here by generating the IR code
 // via a python script in "../../scripts/irgen.py"
 
 const { IR } = require("./ir");
-const SymbolTable = require('./symbol-table');
+const SymbolTable = require("./symbol-table");
 
 //  Compiler / Parser
 //  recursive descent parser.
@@ -176,10 +178,15 @@ class IRCompiler {
     return t.type == type;
   }
 
-  matchToken(type) {
-    if (!this.checkToken(type)) return false;
-    this.next();
-    return true;
+  matchToken(...types) {
+    for (let type of types) {
+      if (this.checkToken(type)) {
+        this.next();
+        return true;
+      }
+    }
+
+    return false;
   }
 
   expect(type, errorMessage) {
@@ -205,6 +212,10 @@ class IRCompiler {
   statement() {
     if (this.matchToken(TType.val)) {
       this.varDecl();
+    } else if (this.matchToken(TType.print)) {
+      this.printStmt();
+    } else {
+      throw new Error("Unhandled token in compiler.");
     }
   }
 
@@ -218,9 +229,23 @@ class IRCompiler {
     }
   }
 
-  expression() {
-    this.literal();
+  printStmt() {
+    this.expression();
+    this.emit(IR.print);
   }
+
+  expression() {
+    this.add();
+  }
+
+  add() {
+    this.literal();
+    if (this.matchToken(TType.plus, TType.minus)) {
+      this.literal();
+      this.emit(IR.add);
+    }    
+  }
+
 
   literal() {
     const token = this.next();

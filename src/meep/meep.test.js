@@ -4,9 +4,7 @@ const CodeGen = require('./codegen');
 
 const code =
 `
-val a = 25;
-val b = 2;
-val isFalse = false;
+print 'a' + 1;
 `
 
 const tokens = tokenize(code);

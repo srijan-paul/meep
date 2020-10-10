@@ -9,7 +9,7 @@ IR = """
   add sub equals
   set_var get_var
   inc_n false_ true_
-  val
+  val print
 """
 
 opcodes = re.findall(r"\w+", IR)

@@ -12,6 +12,7 @@ const IR = Object.freeze({
 	false_: 10,
 	true_: 11,
 	val: 12,
+	print: 13,
 });
 
 
@@ -30,6 +31,7 @@ function irToString(op) {
 	case IR.false_: return 'FALSE_';
 	case IR.true_: return 'TRUE_';
 	case IR.val: return 'VAL';
+	case IR.print: return 'PRINT';
 	}
 }
   module.exports = {IR, irToString};
