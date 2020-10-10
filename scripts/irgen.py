@@ -10,7 +10,7 @@ IR = """
   set_var get_var
   inc_n false_ true_
   val print start_if close_if_body
-  end_if start_else end_else
+  end_if start_else end_else start_loop end_loop
 """
 
 opcodes = re.findall(r"\w+", IR)

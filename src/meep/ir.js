@@ -18,6 +18,8 @@ const IR = Object.freeze({
 	end_if: 16,
 	start_else: 17,
 	end_else: 18,
+	start_loop: 19,
+	end_loop: 20,
 });
 
 
@@ -37,11 +39,13 @@ function irToString(op) {
 	case IR.true_: return 'TRUE_';
 	case IR.val: return 'VAL';
 	case IR.print: return 'PRINT';
-	case IR.start_if: return 'DO_IF';
+	case IR.start_if: return 'START_IF';
 	case IR.close_if_body: return 'CLOSE_IF_BODY';
 	case IR.end_if: return 'END_IF';
 	case IR.start_else: return 'START_ELSE';
 	case IR.end_else: return 'END_ELSE';
+	case IR.start_loop: return 'START_LOOP';
+	case IR.end_loop: return 'END_LOOP';
 	}
 }
   module.exports = {IR, irToString};

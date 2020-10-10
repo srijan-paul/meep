@@ -244,6 +244,8 @@ class IRCompiler {
       this.ifStmt();
     } else if (this.matchToken(TType.lbrace)) {
       this.block();
+    } else if (this.matchToken(TType._while)) {
+      this.whileStmt();
     } else {
       // expression statements
       this.expression();
@@ -291,6 +293,13 @@ class IRCompiler {
     this.popScope();
   }
 
+  whileStmt() {
+    this.expression(); // compile condition.
+    this.emit(IR.start_loop);
+    this.statement();
+    this.emit(IR.end_loop);
+  }
+
   expression() {
     this.comparison();
   }
@@ -314,7 +323,7 @@ class IRCompiler {
 
   grouping() {
     if (this.matchToken(TType.lparen)) {
-      expr = this.expression();
+      this.expression();
       this.expect(TType.rparen, "Expected ')'.");
     }
 

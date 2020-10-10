@@ -115,7 +115,7 @@ class CodeGen {
         // and reduce that to zero to make sure we exit.
         this.write("<[-]");
 
-        this.write("]>"); // close the then-block, move pointer to flag. 
+        this.write("]>"); // close the then-block, move pointer to flag.
         break;
 
       case IR.start_else:
@@ -127,11 +127,16 @@ class CodeGen {
       case IR.end_if:
         this.pop(); // pop the flag
         this.pop(); // pop the flag
-
         break;
-
       case IR.pop_:
         this.pop();
+        break;
+      case IR.start_loop:
+        this.write("[");
+        break;
+      case IR.end_loop:
+        this.write("]");
+        this.pop(); // pop the condition off.
         break;
       default:
         throw new Error("Unhandled IR code.");
