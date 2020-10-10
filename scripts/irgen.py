@@ -9,7 +9,7 @@ IR = """
   add sub equals
   set_var get_var
   inc_n false_ true_
-  val print do_if close_if_body
+  val print start_if close_if_body
   end_if start_else end_else
 """
 

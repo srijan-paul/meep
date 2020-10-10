@@ -38,6 +38,8 @@ const TType = {
   semi: 20,
   lparen: 21,
   rparen: 22,
+  lbrace: 23,
+  rbrace: 24,
 };
 
 function isAlpha(c) {
@@ -116,6 +118,12 @@ function tfTokenize(source) {
         break;
       case ")":
         pushToken(TType.rparen);
+        break;
+      case "{":
+        pushToken(TType.lbrace);
+        break;
+      case "}":
+        pushToken(TType.rbrace);
         break;
       case "'":
         if (eof()) throw new Error("Unterminated character literal.");
@@ -234,6 +242,8 @@ class IRCompiler {
       this.printStmt();
     } else if (this.matchToken(TType._if)) {
       this.ifStmt();
+    } else if (this.matchToken(TType.lbrace)) {
+      this.block();
     } else {
       // expression statements
       this.expression();
@@ -260,7 +270,7 @@ class IRCompiler {
 
   ifStmt() {
     this.expression();
-    this.emit(IR.do_if);
+    this.emit(IR.start_if);
     this.statement();
     this.emit(IR.close_if_body);
 
@@ -271,6 +281,14 @@ class IRCompiler {
     }
 
     this.emit(IR.end_if);
+  }
+
+  block() {
+    this.pushScope();
+    while (!(this.eof() || this.matchToken(TType.rbrace))) {
+      this.statement();
+    }
+    this.popScope();
   }
 
   expression() {

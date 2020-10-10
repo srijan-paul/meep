@@ -3,7 +3,9 @@ const { printIR } = require("./debug");
 const CodeGen = require("./codegen");
 
 const code = `
-if 1 print 1 else print 2;
+ if 1 == 2 print 'a';
+ else if 2 == 3 print 'b';
+ else print 'c';
 `;
 
 const tokens = tokenize(code);

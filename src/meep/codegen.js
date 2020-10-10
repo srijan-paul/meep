@@ -1,4 +1,4 @@
-const { IR } = require("./ir");
+const { IR, irToString } = require("./ir");
 
 class CodeGen {
   constructor(ir) {
@@ -78,14 +78,13 @@ class CodeGen {
         // pretty much the same logic as addition.
         // so I'll write the whole thing at once.
         this.write("[<->-]<");
-      case IR.equals: // pop 2 values off the stack, if they're equal, push 1, else push 0.
-        // inital stack state: [a, b]
-        //                         ^
-        //  pointer at: b
-        this.write("[");
         break;
-
-      case IR.do_if:
+      case IR.equals: // pop 2 values off the stack, if they're equal, push 1, else push 0.
+        // https://esolangs.org/wiki/Brainfuck_algorithms#x_.3D_x_.3D.3D_y
+        this.write("<[->-<]+>[<->[-]]<");
+        this.stackLen--;
+        break;
+      case IR.start_if:
         // Okay, so the way if statements work is kind of tricky.
         // Imagine the current state of the stack is simply [...]
         // where "..." refers to already existing values.
@@ -100,7 +99,7 @@ class CodeGen {
         this.push(1); // execute the else-body if this flag is true,
         // if the then-body is executed, this flag is set to false.
         this.write("<"); // move the stack pointer one step back [c, 1]
-        this.write("["); //                                          ^
+        this.write("["); //                                       ^
         // after checking with the condition and entering the loop body,
         // move the pointer back to the flag since we don't want to
         // overwrite it with local declarations.
@@ -108,21 +107,31 @@ class CodeGen {
         break;
 
       case IR.close_if_body:
-        this.write("-"); // set the flag to false, to indicate
+        // set the flag to false, to indicate
         // that the else block doesn't need to execute.
+        this.write("-");
 
-        this.write("]"); // close the then-block.
+        // move the data pointer back to condition,
+        // and reduce that to zero to make sure we exit.
+        this.write("<[-]");
+
+        this.write("]>"); // close the then-block, move pointer to flag. 
         break;
 
       case IR.start_else:
         this.write("[");
         break;
       case IR.end_else:
-        this.write("]");
+        this.write("[-]]");
         break;
       case IR.end_if:
         this.pop(); // pop the flag
-        this.pop(); // pop the condition
+        this.pop(); // pop the flag
+
+        break;
+
+      case IR.pop_:
+        this.pop();
         break;
       default:
         throw new Error("Unhandled IR code.");
