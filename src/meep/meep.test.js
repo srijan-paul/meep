@@ -3,7 +3,7 @@ const { printIR } = require("./debug");
 const CodeGen = require("./codegen");
 
 const code = `
-var a = "aaa"
+    print "abc";
 `;
 
 const tokens = tokenize(code);

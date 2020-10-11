@@ -23,6 +23,10 @@ class CodeGen {
     this.out += str;
   }
 
+  error(message) {
+    throw new Error(message);
+  }
+
   next() {
     return this.code[this.current++];
   }
@@ -30,17 +34,41 @@ class CodeGen {
   generate() {
     while (this.current < this.code.length) {
       let op = this.next();
+      console.log(this.stack);
       this.generateOp(op);
     }
     return this.out;
   }
 
-  stackLength() {
-    return this.stack.length;
+  getLocalDepth(index) {
+    return this.stack.length - index - 1;
   }
 
-  getLocalDepth(slot) {
-    return this.stackLength() - slot;
+  // takes the index of a local
+  // variable and converts into
+  // a stack offset.
+  // [1, "abcd", 0]
+  //             ^
+  // here, if I want to get local variable 1, at slot 0
+  // then I actually need to go down 5 steps.
+  getMemoryOffset(depth) {
+    let offset = 0;
+    for (let i = depth; i >= 0; i--) {
+      offset += this.stack[this.stack.length - i - 1];
+    }
+    return offset;
+  }
+
+  // print the value at the top
+  // of the stack.
+  printValue() {
+    const size = this.stack[this.stack.length - 1];
+
+    this.write("<".repeat(size - 1));
+    this.write(".[-]>".repeat(size - 1) + ".[-]");
+    this.write("<".repeat(size - 1));
+
+    this.stack.pop();
   }
 
   // copies a byte from a certain depth
@@ -81,11 +109,11 @@ class CodeGen {
   }
 
   pop(isZeroed = false /* whether the stack top is already zero */) {
-    if (!isZeroed) {
-      this.write("[-]");
+    if (isZeroed) {
+      this.write("<");
+      return;
     }
-    this.write("<");
-    this.stack.pop();
+    this.popValue();
   }
 
   pushByte(value) {
@@ -93,16 +121,32 @@ class CodeGen {
     this.stack.push(1);
   }
 
-  getVariable() {
-    
+  // copy a local variable from the given index to the top of the stack
+  // [1, 2, "abcd", 1, 3] <- lets say we want to load "abcd"
+  //                ^
+  // In order to do that we first need to look up how far down the first byte
+  // of "abcd" is, `getStackOffset` does exactly that. In this case, it's 5.
+  // then we find out how big that value is. Here, "abcd" is 4 bytes long.
+  // then we copy the memory cells one by one from that section of memory to the top.
+  // [1, 2, "abcd", 1, 3, "abcd"]
+  getVariable(index) {
+    const depth = this.getLocalDepth(index); // depth of the local in the stack.
+    const memoryOffset = this.getMemoryOffset(depth); // actual depth in BF memory.
+    let size = this.stack[index]; // how many byes to copy.
+
+    for (let i = 0; i < size; i++) {
+      this.copyByte(memoryOffset);
+    }
   }
 
   loadString(string) {
     const length = string.length;
     this.stack.push(length);
-
+    console.log("loading string: ", string);
     for (let i = 0; i < length; i++) {
       this.write(">" + "+".repeat(string.charCodeAt(i)));
+      console.log(string.charCodeAt(i));
+      console.log(this.out);
     }
   }
 
@@ -128,10 +172,17 @@ class CodeGen {
         this.pushByte(1);
         break;
       case IR.print:
-        this.write("."); // print and pop the value off the stack
-        this.pop();
+        this.printValue();
         break;
-      case IR.add: // pop 2 values off the stack, push the result back.
+      case IR.add: {
+        // pop 2 values off the stack, push the result back.
+        const sizeB = this.stack[this.stack.length - 1];
+        const sizeA = this.stack[this.stack.length - 2];
+
+        if (sizeA != sizeB) {
+          this.error("'+' operator can only be used on byte sized numbers.");
+        }
+
         // initally the stack state is: [... , a, b]
         //                                        ^
         // with the pointer pointing to b
@@ -144,15 +195,26 @@ class CodeGen {
         // now, the stack state is [..., a + b, 0]
         //                                      ^
         // so we move the stack pointer one step back
-        this.pop(true);
+        this.popValue();
         break;
-      case IR.sub:
+      }
+      case IR.sub: {
         // pretty much the same logic as addition.
         // so I'll write the whole thing at once.
-        this.write("[<->-]<");
+        const sizeB = this.stack[this.stack.length - 1];
+        const sizeA = this.stack[this.stack.length - 2];
+
+        if (sizeA != sizeB) {
+          this.error("'-' operator can only be used on byte sized numbers.");
+        }
+
+        this.write("[<->-]");
+        this.popValue();
         break;
+      }
       case IR.equals: // pop 2 values off the stack, if they're equal, push 1, else push 0.
         // https://esolangs.org/wiki/Brainfuck_algorithms#x_.3D_x_.3D.3D_y
+
         this.write("<[->-<]+>[<->[-]]<");
         // pop from stack? (!)
         break;
@@ -198,22 +260,22 @@ class CodeGen {
         break;
       case IR.end_if:
         this.pop(); // pop the flag
-        this.pop(); // pop the condition
+        this.popValue(); // pop the condition
         break;
       case IR.pop_:
-        this.pop();
+        this.popValue();
         break;
       case IR.start_loop:
         this.write("[");
         break;
       case IR.end_loop:
         this.write("]");
-        this.pop(); // pop the condition off.
+        this.popValue(); // pop the condition off.
         break;
       case IR.popn:
         let count = this.next();
         for (let i = 0; i < count; i++) {
-          this.pop();
+          this.popValue();
         }
         break;
       case IR.get_var:
@@ -221,8 +283,7 @@ class CodeGen {
         // going down the stack to the variable's
         // slot and then copying into the top of the stack.
         let index = this.next();
-        let depth = this.getLocalDepth(index);
-        this.copyByte(depth);
+        this.getVariable(index);
         break;
       case IR.cmp_greater:
       case IR.cmp_less:

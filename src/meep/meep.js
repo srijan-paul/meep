@@ -144,7 +144,11 @@ function tfTokenize(source) {
       default:
         if (isAlpha(char)) {
           // keyword / identifier
-          while (!eof() && isAlpha(source[current])) current++;
+          while (
+            !eof() &&
+            (isAlpha(source[current]) || isDigit(source[current]))
+          )
+            current++;
           let str = source.substring(start, current);
           let type = TType.id;
           if (tfKeywords.has(str)) type = tfKeywords.get(str);
@@ -390,10 +394,7 @@ class IRCompiler {
 
       this.emit(IR.get_var, slot);
     } else if (token.type == TType.string) {
-      this.emit(
-        IR.load_string,
-        token.raw.substring(1, token.raw.length - 1)
-      );
+      this.emit(IR.load_string, token.raw.substring(1, token.raw.length - 1));
     } else {
       throw new Error(`CompileError: Unexpected '${token.raw}' token.`);
     }
