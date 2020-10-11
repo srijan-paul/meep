@@ -66,7 +66,7 @@ class CodeGen {
 
     this.write("<".repeat(size - 1));
     this.write(".[-]>".repeat(size - 1) + ".[-]");
-    this.write("<".repeat(size - 1));
+    this.write("<".repeat(size));
 
     this.stack.pop();
   }
@@ -75,9 +75,16 @@ class CodeGen {
   // into the stack to the top of the stack.
   // current position is assumed to be the top of the
   // stack when calling this function.
-  copyByte(depth) {
-    this.pushByte(0); // push an empty value on top of the stack. [...a, 0]
-    this.write("<".repeat(depth)); // go to the slot                     ^
+  copyByte(depth, silent = false) {
+    // push an empty value on top of the stack. [...a, 0]
+    //                                                 ^
+    if (silent) {
+      this.write(">");
+    } else {
+      this.pushByte(0);
+    }
+
+    this.write("<".repeat(depth)); // go to the variable's slot
     this.write("["); // repeat until the slot is 0.
     this.write(">".repeat(depth)); // go to top of stack
     this.write("+"); // increment the value at the top.
@@ -135,18 +142,18 @@ class CodeGen {
     let size = this.stack[index]; // how many byes to copy.
 
     for (let i = 0; i < size; i++) {
-      this.copyByte(memoryOffset);
+      this.copyByte(memoryOffset, true);
     }
+
+    this.stack.push(size);
   }
 
   loadString(string) {
     const length = string.length;
     this.stack.push(length);
-    console.log("loading string: ", string);
+
     for (let i = 0; i < length; i++) {
       this.write(">" + "+".repeat(string.charCodeAt(i)));
-      console.log(string.charCodeAt(i));
-      console.log(this.out);
     }
   }
 
@@ -216,7 +223,7 @@ class CodeGen {
         // https://esolangs.org/wiki/Brainfuck_algorithms#x_.3D_x_.3D.3D_y
 
         this.write("<[->-<]+>[<->[-]]<");
-        // pop from stack? (!)
+        this.stack.pop();
         break;
       case IR.start_if:
         // Okay, so the way if statements work is kind of tricky.
@@ -230,7 +237,7 @@ class CodeGen {
         // if-body was executed or not.
         //
 
-        this.pushByte(1); // execute the else-block if this flag is true,
+        this.pushByte(1) // execute the else-block if this flag is true,
         // if the then-block is executed, this flag is set to false.
         this.write("<"); // move the stack pointer one step back [c, 1]
         this.write("["); //                                       ^
@@ -248,7 +255,6 @@ class CodeGen {
         // move the data pointer back to condition,
         // and reduce that to zero to make sure we exit.
         this.write("<[-]");
-
         this.write("]>"); // close the then-block, move pointer to flag.
         break;
 
@@ -259,7 +265,7 @@ class CodeGen {
         this.write("[-]]"); // zero out the flag to excute this only once.
         break;
       case IR.end_if:
-        this.pop(); // pop the flag
+        this.popValue(); // pop the flag
         this.popValue(); // pop the condition
         break;
       case IR.pop_:
