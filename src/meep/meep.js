@@ -324,7 +324,7 @@ class IRCompiler {
     this.comparison();
   }
 
-  assignment() {
+  comparison() {
 
   }
 
@@ -349,6 +349,7 @@ class IRCompiler {
     if (this.matchToken(TType.lparen)) {
       this.expression();
       this.expect(TType.rparen, "Expected ')'.");
+      return;
     }
 
     this.literal();
@@ -359,13 +360,13 @@ class IRCompiler {
 
     if (token.type == TType.number) {
       let n = parseInt(token.value);
-      this.emit(IR.val, n);
+      this.emit(IR.load_byte, n);
     } else if (token.type == TType._false) {
       this.emit(IR.false_);
     } else if (token.type == TType._true) {
       this.emit(IR.true_);
     } else if (token.type == TType.char) {
-      this.emit(IR.val, token.value.charCodeAt(1));
+      this.emit(IR.load_byte, token.value.charCodeAt(1));
     } else if (token.type == TType.id) {
       let slot = this.getVar(token.value);
       

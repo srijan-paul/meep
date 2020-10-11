@@ -11,7 +11,7 @@ const IR = Object.freeze({
 	inc_n: 9,
 	false_: 10,
 	true_: 11,
-	val: 12,
+	load_byte: 12,
 	print: 13,
 	start_if: 14,
 	close_if_body: 15,
@@ -38,7 +38,7 @@ function irToString(op) {
 	case IR.inc_n: return 'INC_N';
 	case IR.false_: return 'FALSE_';
 	case IR.true_: return 'TRUE_';
-	case IR.val: return 'VAL';
+	case IR.load_byte: return 'LOAD_BYTE';
 	case IR.print: return 'PRINT';
 	case IR.start_if: return 'START_IF';
 	case IR.close_if_body: return 'CLOSE_IF_BODY';

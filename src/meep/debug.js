@@ -4,7 +4,7 @@ function printIR(ops) {
   for (let i = 0; i < ops.length; i++) {
     let op = ops[i];
     switch (op) {
-      case IR.val:
+      case IR.load_byte:
         console.log(irToString(op));
         console.log(ops[++i]);
         break;

@@ -5,7 +5,7 @@ class CodeGen {
     this.code = ir;
     this.current = 0;
     this.out = "";
-    this.stackLen = 0;
+    this.valueStack = [];
   }
 
   write(str) {
@@ -24,24 +24,32 @@ class CodeGen {
     return this.out;
   }
 
+  stackLength() {
+    return this.valueStack.length;
+  }
+
+  getLocalDepth(slot) {
+      return this.stackLength() - slot;
+  }
+
   pop(isZeroed = false /* whether the stack top is already zero */) {
     if (!isZeroed) {
       this.write("[-]");
     }
     this.write("<");
-    this.stackLen--;
+    this.valueStack.pop();
   }
 
-  push(value) {
+  pushByte(value) {
     this.write(">" + "+".repeat(value));
-    this.stackLen++;
+    this.valueStack.push(1); // value stack stores the size of bytes.
   }
 
   generateOp(op) {
     switch (op) {
-      case IR.val:
+      case IR.load_byte:
         let value = this.next();
-        this.push(value);
+        this.pushByte(value);
         break;
       case IR.false_:
         // since false is 0, which is assumed to be the
@@ -49,11 +57,11 @@ class CodeGen {
         // in other words, move up one cell.
         // [a, b] ----> [a, b, 0]
         //     ^               ^
-        this.push(0);
+        this.pushByte(0);
         break;
       case IR.true_:
         // go up once cell and set it to 1.
-        this.push(1);
+        this.pushByte(1);
         break;
       case IR.print:
         this.write("."); // print and pop the value off the stack
@@ -82,7 +90,7 @@ class CodeGen {
       case IR.equals: // pop 2 values off the stack, if they're equal, push 1, else push 0.
         // https://esolangs.org/wiki/Brainfuck_algorithms#x_.3D_x_.3D.3D_y
         this.write("<[->-<]+>[<->[-]]<");
-        this.stackLen--;
+        // pop from stack? (!)
         break;
       case IR.start_if:
         // Okay, so the way if statements work is kind of tricky.
@@ -96,7 +104,7 @@ class CodeGen {
         // if-body was executed or not.
         //
 
-        this.push(1); // execute the else-block if this flag is true,
+        this.pushByte(1); // execute the else-block if this flag is true,
         // if the then-block is executed, this flag is set to false.
         this.write("<"); // move the stack pointer one step back [c, 1]
         this.write("["); //                                       ^
@@ -149,8 +157,8 @@ class CodeGen {
         // going down the stack to the variable's
         // slot and then copying into the top of the stack.
         let index = this.next();
-        let depth = this.stackLen - index;
-        this.push(0); // push an empty value on top of the stack.
+        let depth = this.getLocalDepth(index);
+        this.pushByte(0); // push an empty value on top of the stack.
 
         // intially our stack state looks like this: [a, ... , 0]
         //                                                     ^
