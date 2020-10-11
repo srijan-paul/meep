@@ -40,6 +40,9 @@ const TType = {
   rparen: 22,
   lbrace: 23,
   rbrace: 24,
+  lbrac: 25,
+  rbrac: 26,
+  string: 27,
 };
 
 function isAlpha(c) {
@@ -68,7 +71,7 @@ function tfTokenize(source) {
   const tokens = [];
 
   function pushToken(type) {
-    tokens.push({ value: source.substring(start, current), type });
+    tokens.push({ raw: source.substring(start, current), type });
   }
 
   function eof() {
@@ -131,6 +134,12 @@ function tfTokenize(source) {
           throw new Error("Empty character literal.");
         expect("'");
         pushToken(TType.char);
+        break;
+      case '"':
+        while (!eof() && source[current] != '"') current++;
+        if (eof()) throw new Error("Unterminated string literal.");
+        current++; // eat the '"'
+        pushToken(TType.string);
         break;
       default:
         if (isAlpha(char)) {
@@ -276,7 +285,7 @@ class IRCompiler {
 
   varDecl() {
     const name = this.expect(TType.id);
-    this.symboltable.add(name.value);
+    this.symboltable.add(name.raw);
 
     if (this.matchToken(TType.eq)) {
       this.expression();
@@ -321,18 +330,23 @@ class IRCompiler {
   }
 
   expression() {
-    this.comparison();
+    this.equality();
   }
 
-  comparison() {
-
+  equality() {
+    this.comparison();
+    while (this.matchToken(TType.eqeq)) {
+      this.comparison();
+      this.emit(IR.equals);
+    }
   }
 
   comparison() {
     this.add();
-    while (this.matchToken(TType.eqeq)) {
+    while (this.matchToken(TType.less, TType.greater)) {
+      let op = this.prev().type == TType.less ? IR.cmp_less : IR.cmp_greater;
       this.add();
-      this.emit(IR.equals);
+      this.emit(op);
     }
   }
 
@@ -359,24 +373,29 @@ class IRCompiler {
     const token = this.next();
 
     if (token.type == TType.number) {
-      let n = parseInt(token.value);
+      let n = parseInt(token.raw);
       this.emit(IR.load_byte, n);
     } else if (token.type == TType._false) {
       this.emit(IR.false_);
     } else if (token.type == TType._true) {
       this.emit(IR.true_);
     } else if (token.type == TType.char) {
-      this.emit(IR.load_byte, token.value.charCodeAt(1));
+      this.emit(IR.load_byte, token.raw.charCodeAt(1));
     } else if (token.type == TType.id) {
-      let slot = this.getVar(token.value);
-      
+      let slot = this.getVar(token.raw);
+
       if (slot == -1) {
-        throw new Error("Unable to find variable " + token.value);
+        throw new Error("Unable to find variable " + token.raw);
       }
-      
+
       this.emit(IR.get_var, slot);
+    } else if (token.type == TType.string) {
+      this.emit(
+        IR.load_string,
+        token.raw.substring(1, token.raw.length - 1)
+      );
     } else {
-      throw new Error(`CompileError: Unexpected '${token.value}' token.`);
+      throw new Error(`CompileError: Unexpected '${token.raw}' token.`);
     }
   }
 }

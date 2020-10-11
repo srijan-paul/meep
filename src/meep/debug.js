@@ -5,6 +5,7 @@ function printIR(ops) {
     let op = ops[i];
     switch (op) {
       case IR.load_byte:
+      case IR.load_string:
         console.log(irToString(op));
         console.log(ops[++i]);
         break;

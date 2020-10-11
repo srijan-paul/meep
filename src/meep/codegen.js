@@ -1,11 +1,22 @@
 const { IR, irToString } = require("./ir");
 
 class CodeGen {
-  constructor(ir) {
-    this.code = ir;
+  constructor(irs /* IR opcodes array */) {
+    this.code = irs;
     this.current = 0;
+    // output produced by the CodeGenerator.
     this.out = "";
-    this.valueStack = [];
+
+    // this stack loosely mirrors
+    // the state of the memory cells
+    // at runtime.
+    // this helps keep track of variables and literals
+    // that are larger than 1 memory cell (1 byte).
+    // for example, a load_string instruction loading a string of length 10
+    // would push 10 into this stack. Whereas loading a single byte would push '1'.
+    // each entry in the stack specifies how many bytes the value at that position is
+    // at runtime.
+    this.stack = [];
   }
 
   write(str) {
@@ -25,11 +36,48 @@ class CodeGen {
   }
 
   stackLength() {
-    return this.valueStack.length;
+    return this.stack.length;
   }
 
   getLocalDepth(slot) {
-      return this.stackLength() - slot;
+    return this.stackLength() - slot;
+  }
+
+  // copies a byte from a certain depth
+  // into the stack to the top of the stack.
+  // current position is assumed to be the top of the
+  // stack when calling this function.
+  copyByte(depth) {
+    this.pushByte(0); // push an empty value on top of the stack. [...a, 0]
+    this.write("<".repeat(depth)); // go to the slot                     ^
+    this.write("["); // repeat until the slot is 0.
+    this.write(">".repeat(depth)); // go to top of stack
+    this.write("+"); // increment the value at the top.
+    this.write(">+"); // go one step forward, and increment that value too.
+    this.write("<".repeat(depth + 1)); // go back to slot
+    this.write("-"); // decrement.
+    this.write("]" + ">".repeat(depth + 1)); // exit when the variable slot is zero.
+
+    // after the move, our stack is : [0, ... a, a]
+    //                                           ^
+
+    // now we want to copy the topmost a back into the original slot.
+    this.write("["); // start loop, stop when the data ptr is 0
+    this.write("<".repeat(depth + 1)); // go to the original slot which is now 0.
+    this.write("+"); // increment it.
+    this.write(">".repeat(depth + 1)); // come back to the copy
+    this.write("-"); // decrement.
+    this.write("]<"); // repeat until copy is 0. and then pop it.
+  }
+
+  // removing a value from the stack
+  // isn't as simple as emitting a "[-]<"
+  // since sometimes values are larger than one byte,
+  // in case of strings and arrays.
+  // Forunately, it's not that complicated either.
+  popValue() {
+    let size = this.stack.pop();
+    this.write("[-]<".repeat(size));
   }
 
   pop(isZeroed = false /* whether the stack top is already zero */) {
@@ -37,12 +85,25 @@ class CodeGen {
       this.write("[-]");
     }
     this.write("<");
-    this.valueStack.pop();
+    this.stack.pop();
   }
 
   pushByte(value) {
     this.write(">" + "+".repeat(value));
-    this.valueStack.push(1); // value stack stores the size of bytes.
+    this.stack.push(1);
+  }
+
+  getVariable() {
+    
+  }
+
+  loadString(string) {
+    const length = string.length;
+    this.stack.push(length);
+
+    for (let i = 0; i < length; i++) {
+      this.write(">" + "+".repeat(string.charCodeAt(i)));
+    }
   }
 
   generateOp(op) {
@@ -50,6 +111,9 @@ class CodeGen {
       case IR.load_byte:
         let value = this.next();
         this.pushByte(value);
+        break;
+      case IR.load_string:
+        this.loadString(this.next());
         break;
       case IR.false_:
         // since false is 0, which is assumed to be the
@@ -158,29 +222,11 @@ class CodeGen {
         // slot and then copying into the top of the stack.
         let index = this.next();
         let depth = this.getLocalDepth(index);
-        this.pushByte(0); // push an empty value on top of the stack.
-
-        // intially our stack state looks like this: [a, ... , 0]
-        //                                                     ^
-        this.write("<".repeat(depth)); // go to the slot
-        this.write("["); // repeat until the slot is 0.
-        this.write(">".repeat(depth)); // go to top of stack
-        this.write("+"); // increment the value at the top.
-        this.write(">+"); // go one step forward, and increment that value too.
-        this.write("<".repeat(depth + 1)); // go back to slot
-        this.write("-"); // decrement.
-        this.write("]" + ">".repeat(depth + 1)); // exit when the variable slot is zero.
-
-        // after the move, our stack is : [0, ... a, a]
-        //                                           ^
-
-        // now we want to copy the topmost a back into the original slot.
-        this.write("["); // start loop, stop when the data ptr is 0
-        this.write("<".repeat(depth + 1)); // go to the original slot which is now 0.
-        this.write("+"); // increment it.
-        this.write(">".repeat(depth + 1)); // come back to the copy
-        this.write("-"); // decrement.
-        this.write("]<"); // repeat until copy is 0. and then pop it.
+        this.copyByte(depth);
+        break;
+      case IR.cmp_greater:
+      case IR.cmp_less:
+        throw new Error("comparison operators not yet implemented.");
         break;
       default:
         throw new Error("Unhandled IR code.");

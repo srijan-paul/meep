@@ -3,15 +3,11 @@ const { printIR } = require("./debug");
 const CodeGen = require("./codegen");
 
 const code = `
-var a = 1;
-var b = 2;
-if a == (b - 1) {
-    print 'a';
-}
+var a = "aaa"
 `;
 
 const tokens = tokenize(code);
-console.log(tokens.map((t) => t.value));
+console.log(tokens.map((t) => t.raw));
 
 const compiler = new IRCompiler(tokens);
 const ir = compiler.compile();

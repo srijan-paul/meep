@@ -11,7 +11,7 @@ IR = """
   inc_n false_ true_
   load_byte print start_if close_if_body
   end_if start_else end_else start_loop end_loop
-  popn
+  popn cmp_less cmp_greater load_string
 """
 
 opcodes = re.findall(r"\w+", IR)
