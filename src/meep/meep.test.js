@@ -3,7 +3,14 @@ const { printIR } = require("./debug");
 const CodeGen = require("./codegen");
 
 const code = `
- while true print 'a';
+var a = 1
+var b = 2
+
+if a == b {
+    print 'o'
+} else {
+    print 'p'
+}
 `;
 
 const tokens = tokenize(code);

@@ -96,8 +96,8 @@ class CodeGen {
         // if-body was executed or not.
         //
 
-        this.push(1); // execute the else-body if this flag is true,
-        // if the then-body is executed, this flag is set to false.
+        this.push(1); // execute the else-block if this flag is true,
+        // if the then-block is executed, this flag is set to false.
         this.write("<"); // move the stack pointer one step back [c, 1]
         this.write("["); //                                       ^
         // after checking with the condition and entering the loop body,
@@ -122,11 +122,11 @@ class CodeGen {
         this.write("[");
         break;
       case IR.end_else:
-        this.write("[-]]");
+        this.write("[-]]"); // zero out the flag to excute this only once.
         break;
       case IR.end_if:
         this.pop(); // pop the flag
-        this.pop(); // pop the flag
+        this.pop(); // pop the condition
         break;
       case IR.pop_:
         this.pop();
@@ -137,6 +137,42 @@ class CodeGen {
       case IR.end_loop:
         this.write("]");
         this.pop(); // pop the condition off.
+        break;
+      case IR.popn:
+        let count = this.next();
+        for (let i = 0; i < count; i++) {
+          this.pop();
+        }
+        break;
+      case IR.get_var:
+        // getting a variable involves
+        // going down the stack to the variable's
+        // slot and then copying into the top of the stack.
+        let index = this.next();
+        let depth = this.stackLen - index;
+        this.push(0); // push an empty value on top of the stack.
+
+        // intially our stack state looks like this: [a, ... , 0]
+        //                                                     ^
+        this.write("<".repeat(depth)); // go to the slot
+        this.write("["); // repeat until the slot is 0.
+        this.write(">".repeat(depth)); // go to top of stack
+        this.write("+"); // increment the value at the top.
+        this.write(">+"); // go one step forward, and increment that value too.
+        this.write("<".repeat(depth + 1)); // go back to slot
+        this.write("-"); // decrement.
+        this.write("]" + ">".repeat(depth + 1)); // exit when the variable slot is zero.
+
+        // after the move, our stack is : [0, ... a, a]
+        //                                           ^
+
+        // now we want to copy the topmost a back into the original slot.
+        this.write("["); // start loop, stop when the data ptr is 0
+        this.write("<".repeat(depth + 1)); // go to the original slot which is now 0.
+        this.write("+"); // increment it.
+        this.write(">".repeat(depth + 1)); // come back to the copy
+        this.write("-"); // decrement.
+        this.write("]<"); // repeat until copy is 0. and then pop it.
         break;
       default:
         throw new Error("Unhandled IR code.");

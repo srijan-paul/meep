@@ -16,7 +16,7 @@
 // we want this to be done quick and dirty...
 
 const TType = {
-  val: 1,
+  var: 1,
   _if: 2,
   _while: 3,
   _else: 4,
@@ -53,7 +53,7 @@ function isDigit(c) {
 }
 
 const tfKeywords = new Map([
-  ["val", TType.val],
+  ["var", TType.var],
   ["if", TType._if],
   ["while", TType._while],
   ["else", TType._else],
@@ -222,9 +222,28 @@ class IRCompiler {
     opcodes.forEach((op) => this.ir.push(op));
   }
 
-  pushScope() {}
+  addSymbol(name) {
+    this.symboltable.addSymbol(name);
+  }
 
-  popScope() {}
+  pushScope() {
+    this.symboltable.pushScope();
+  }
+
+  popScope() {
+    const localCount = this.symboltable.popScope();
+    if (localCount == 0) return;
+    if (localCount == 1) {
+      this.emit(IR.pop_);
+      return;
+    }
+
+    this.emit(IR.popn, localCount);
+  }
+
+  getVar(name) {
+    return this.symboltable.find(name);
+  }
 
   // recursive descent parsing
 
@@ -236,7 +255,7 @@ class IRCompiler {
   }
 
   statement() {
-    if (this.matchToken(TType.val)) {
+    if (this.matchToken(TType.var)) {
       this.varDecl();
     } else if (this.matchToken(TType.print)) {
       this.printStmt();
@@ -257,6 +276,7 @@ class IRCompiler {
 
   varDecl() {
     const name = this.expect(TType.id);
+    this.symboltable.add(name.value);
 
     if (this.matchToken(TType.eq)) {
       this.expression();
@@ -304,6 +324,10 @@ class IRCompiler {
     this.comparison();
   }
 
+  assignment() {
+
+  }
+
   comparison() {
     this.add();
     while (this.matchToken(TType.eqeq)) {
@@ -342,8 +366,16 @@ class IRCompiler {
       this.emit(IR.true_);
     } else if (token.type == TType.char) {
       this.emit(IR.val, token.value.charCodeAt(1));
+    } else if (token.type == TType.id) {
+      let slot = this.getVar(token.value);
+      
+      if (slot == -1) {
+        throw new Error("Unable to find variable " + token.value);
+      }
+      
+      this.emit(IR.get_var, slot);
     } else {
-      throw new Error("Unhandled token in compiler.");
+      throw new Error(`CompileError: Unexpected '${token.value}' token.`);
     }
   }
 }

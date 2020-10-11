@@ -14,6 +14,10 @@ function printIR(ops) {
       case IR.false_:
         console.log("FALSE");
         break;
+      case IR.get_var:
+        console.log("GET_VAR");
+        console.log(ops[++i]);
+        break;
       default:
         console.log(irToString(op));
     }
