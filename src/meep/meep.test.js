@@ -3,15 +3,19 @@ const { printIR } = require("./debug");
 const CodeGen = require("./codegen");
 
 const code = `
-   var a = 1;
-   var eq = "a==b";
-   var b = 1;
-   var neq = "a!=b";
-   if a == b {
-       print eq;
-   } else {
-       print neq;
-   }
+    var endmsg = "\nprogram ended successfully";
+    var a = 1;
+    var str1 = "a == b";
+    var b = 1;
+    var str2 = "a != b";
+
+    if a == b {
+        print str1;
+    } else {
+        print str2;
+    }
+
+    print endmsg;
 `;
 
 const tokens = tokenize(code);

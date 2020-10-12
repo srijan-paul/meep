@@ -1,6 +1,7 @@
 let memory = []; // 1000
 let mptr = 0;
 let input = []; // 1000
+let instr = 0;
 
 let count;
 print ("Enter the number of instructions: ");
@@ -11,7 +12,7 @@ scan[count, input]
 
 i = 0;
 while(i < count) {
-    let instruction = input[i]; 
+    instr = input[i]; 
     
     if (instruction == '>') {
         mptr++;

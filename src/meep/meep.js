@@ -172,7 +172,6 @@ function tfTokenize(source) {
 // via a python script in "../../scripts/irgen.py"
 
 const { IR } = require("./ir");
-const SymbolTable = require("./symbol-table");
 
 //  Compiler / Parser
 //  recursive descent parser.
@@ -182,7 +181,8 @@ class IRCompiler {
     this.tokens = tokens;
     this.current = 0;
     this.ir = [];
-    this.symboltable = new SymbolTable();
+    this.symbols = []; // symbol table
+    this.scopeDepth = 0;
   }
 
   // helper methods
@@ -236,26 +236,22 @@ class IRCompiler {
   }
 
   addSymbol(name) {
-    this.symboltable.addSymbol(name);
+    if (this.symbols.includes(name)) {
+      throw new Error(`Attempt to redeclare variable ${name}`);
+    }
+    this.symbols.push(name);
   }
 
   pushScope() {
-    this.symboltable.pushScope();
+    this.scopeDepth++;
   }
 
   popScope() {
-    const localCount = this.symboltable.popScope();
-    if (localCount == 0) return;
-    if (localCount == 1) {
-      this.emit(IR.pop_);
-      return;
-    }
-
-    this.emit(IR.popn, localCount);
+    this.scopeDepth--;
   }
 
   getVar(name) {
-    return this.symboltable.find(name);
+    return this.symbols.indexOf(name);
   }
 
   // recursive descent parsing
@@ -288,8 +284,13 @@ class IRCompiler {
   }
 
   varDecl() {
+    
+    if (this.scopeDepth != 0) {
+      throw new Error("All variables must be declared globally in the top level scope.");
+    }
+
     const name = this.expect(TType.id);
-    this.symboltable.add(name.raw);
+    this.addSymbol(name.raw);
 
     if (this.matchToken(TType.eq)) {
       this.expression();
