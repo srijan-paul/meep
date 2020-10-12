@@ -34,7 +34,6 @@ class CodeGen {
   generate() {
     while (this.current < this.code.length) {
       let op = this.next();
-      console.log(this.stack);
       this.generateOp(op);
     }
     return this.out;
@@ -237,7 +236,7 @@ class CodeGen {
         // if-body was executed or not.
         //
 
-        this.pushByte(1) // execute the else-block if this flag is true,
+        this.pushByte(1); // execute the else-block if this flag is true,
         // if the then-block is executed, this flag is set to false.
         this.write("<"); // move the stack pointer one step back [c, 1]
         this.write("["); //                                       ^
@@ -290,6 +289,24 @@ class CodeGen {
         // slot and then copying into the top of the stack.
         let index = this.next();
         this.getVariable(index);
+        break;
+      case IR.make_bus:
+        // at this point all the elements of the bus
+        // are already loaded into the BF memory tape.
+        // So all that needs to be done is to modify the
+        // the Meep stack to ensure all those values are
+        // represented as an aggregate.
+        const length = this.next();
+        // adjust the stack to represent the bus as a single
+        // aggregate value instead of multiple variably sized values.
+
+        let bytesRemoved = 0;
+
+        for (let i = 0; i < length; i++) {
+          bytesRemoved += this.stack.pop();
+        }
+        this.stack.push(bytesRemoved);
+
         break;
       case IR.cmp_greater:
       case IR.cmp_less:

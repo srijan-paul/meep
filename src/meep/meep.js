@@ -15,7 +15,7 @@
 // since javascript doesn't have ennums and
 // we want this to be done quick and dirty...
 
-const TType = {
+const TType = Object.freeze({
   var: 1,
   _if: 2,
   _while: 3,
@@ -43,7 +43,8 @@ const TType = {
   lbrac: 25,
   rbrac: 26,
   string: 27,
-};
+  comma: 28,
+});
 
 function isAlpha(c) {
   let ascii = c.charCodeAt(0);
@@ -127,6 +128,9 @@ function tfTokenize(source) {
         break;
       case "}":
         pushToken(TType.rbrace);
+        break;
+      case ",":
+        pushToken(TType.comma);
         break;
       case "'":
         if (eof()) throw new Error("Unterminated character literal.");
@@ -284,9 +288,10 @@ class IRCompiler {
   }
 
   varDecl() {
-    
     if (this.scopeDepth != 0) {
-      throw new Error("All variables must be declared globally in the top level scope.");
+      throw new Error(
+        "All variables must be declared globally in the top level scope."
+      );
     }
 
     const name = this.expect(TType.id);
@@ -396,9 +401,24 @@ class IRCompiler {
       this.emit(IR.get_var, slot);
     } else if (token.type == TType.string) {
       this.emit(IR.load_string, token.raw.substring(1, token.raw.length - 1));
+    } else if (token.type == TType.lbrace) {
+      this.busLiteral();
     } else {
       throw new Error(`CompileError: Unexpected '${token.raw}' token.`);
     }
+  }
+
+  // a bus is simply a stream of byes.
+  // var mybus  = {1, 2, "Abc"} will reduce down the mybus variable
+  // to an aggregate of 6 bytes, as if it were an array like [1, 2, 3, 'a', 'b', 'c']
+  busLiteral() {
+    let length = 0;
+    while (!(this.eof() || this.matchToken(TType.rbrace))) {
+      this.expression();
+      length++;
+      this.matchToken(TType.comma);
+    }
+    this.emit(IR.make_bus, length);
   }
 }
 

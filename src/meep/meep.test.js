@@ -5,7 +5,7 @@ const CodeGen = require("./codegen");
 const code = `
     var endmsg = "\nprogram ended successfully";
     var a = 1;
-    var str1 = "a == b";
+    var str1 = {'a', "===" ,'b'};
     var b = 1;
     var str2 = "a != b";
 

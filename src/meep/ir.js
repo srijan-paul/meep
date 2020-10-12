@@ -24,6 +24,8 @@ const IR = Object.freeze({
 	cmp_less: 22,
 	cmp_greater: 23,
 	load_string: 24,
+	make_bus: 25,
+	index_var: 26,
 });
 
 
@@ -54,6 +56,8 @@ function irToString(op) {
 	case IR.cmp_less: return 'CMP_LESS';
 	case IR.cmp_greater: return 'CMP_GREATER';
 	case IR.load_string: return 'LOAD_STRING';
+	case IR.make_bus: return 'MAKE_BUS';
+	case IR.index_var: return 'INDEX_VAR';
 	}
 }
   module.exports = {IR, irToString};
