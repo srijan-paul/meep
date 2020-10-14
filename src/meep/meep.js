@@ -44,6 +44,7 @@ const TType = Object.freeze({
   rbrac: 26,
   string: 27,
   comma: 28,
+  set: 29,
 });
 
 function isAlpha(c) {
@@ -64,6 +65,7 @@ const tfKeywords = new Map([
   ["true", TType._true],
   ["false", TType._false],
   ["print", TType.print],
+  ["set", TType.set],
 ]);
 
 function tfTokenize(source) {
@@ -255,6 +257,10 @@ class IRCompiler {
   }
 
   getVar(name) {
+    const index = this.symbols.indexOf(name);
+    if (index == -1) {
+      throw new Error(`Undefined global variable '${name}'.`);
+    }
     return this.symbols.indexOf(name);
   }
 
@@ -272,6 +278,8 @@ class IRCompiler {
       this.varDecl();
     } else if (this.matchToken(TType.print)) {
       this.printStmt();
+    } else if (this.matchToken(TType.set)) {
+      this.setStmt();
     } else if (this.matchToken(TType._if)) {
       this.ifStmt();
     } else if (this.matchToken(TType.lbrace)) {
@@ -302,6 +310,20 @@ class IRCompiler {
     } else {
       this.emit(0);
     }
+  }
+
+  setStmt() {
+    let setOp = IR.set_var;
+    let varname = this.expect(TType.id);
+    const localIndex = this.getVar(varname.raw);
+
+    if (this.matchToken(TType.lbrac)) {
+      setOp = IR.mutate_bus;
+      this.expression();
+      this.expect(TType.rbrac);
+    }
+
+    this.emit(setOp, localIndex);
   }
 
   printStmt() {

@@ -43,6 +43,10 @@ class CodeGen {
     return this.stack.length - index - 1;
   }
 
+  sizeOfVal(index) {
+    return this.stack[index];
+  }
+
   // takes the index of a local
   // variable and converts into
   // a stack offset.
@@ -53,7 +57,7 @@ class CodeGen {
   getMemoryOffset(depth) {
     let offset = 0;
     for (let i = depth; i >= 0; i--) {
-      offset += this.stack[this.stack.length - i - 1];
+      offset += this.sizeOfVal(this.stack.length - i - 1);
     }
     return offset;
   }
@@ -61,7 +65,7 @@ class CodeGen {
   // print the value at the top
   // of the stack.
   printValue() {
-    const size = this.stack[this.stack.length - 1];
+    const size = this.sizeOfVal(this.stack.length - 1);
 
     this.write("<".repeat(size - 1));
     this.write(".[-]>".repeat(size - 1) + ".[-]");
@@ -138,13 +142,21 @@ class CodeGen {
   getVariable(index) {
     const depth = this.getLocalDepth(index); // depth of the local in the stack.
     const memoryOffset = this.getMemoryOffset(depth); // actual depth in BF memory.
-    let size = this.stack[index]; // how many byes to copy.
+    let size = this.sizeOfVal(index); // how many byes to copy.
 
     for (let i = 0; i < size; i++) {
       this.copyByte(memoryOffset, true);
     }
 
     this.stack.push(size);
+  }
+
+  // pop the value off the top of the stack
+  // set the variable at slot "index" to this value
+  setVariable(index) {
+    const depth = this.getLocalDepth(index);
+    const memoryOffset = this.getMemoryOffset(depth);
+    let size = this.this.sizeOfVal(index);
   }
 
   loadString(string) {
@@ -182,8 +194,8 @@ class CodeGen {
         break;
       case IR.add: {
         // pop 2 values off the stack, push the result back.
-        const sizeB = this.stack[this.stack.length - 1];
-        const sizeA = this.stack[this.stack.length - 2];
+        const sizeB = this.sizeOfVal(this.stack.length - 1);
+        const sizeA = this.sizeOfVal(this.stack.length - 2);
 
         if (sizeA != sizeB) {
           this.error("'+' operator can only be used on byte sized numbers.");
@@ -207,8 +219,8 @@ class CodeGen {
       case IR.sub: {
         // pretty much the same logic as addition.
         // so I'll write the whole thing at once.
-        const sizeB = this.stack[this.stack.length - 1];
-        const sizeA = this.stack[this.stack.length - 2];
+        const sizeB = this.sizeOfVal(this.stack.length - 1);
+        const sizeA = this.sizeOfVal(this.stack.length - 2);
 
         if (sizeA != sizeB) {
           this.error("'-' operator can only be used on byte sized numbers.");
@@ -277,19 +289,26 @@ class CodeGen {
         this.write("]");
         this.popValue(); // pop the condition off.
         break;
-      case IR.popn:
+      case IR.popn: {
         let count = this.next();
         for (let i = 0; i < count; i++) {
           this.popValue();
         }
         break;
-      case IR.get_var:
+      }
+      case IR.get_var: {
         // getting a variable involves
         // going down the stack to the variable's
         // slot and then copying into the top of the stack.
-        let index = this.next();
+        const index = this.next();
         this.getVariable(index);
         break;
+      }
+      case IR.set_var: {
+        const index = this.next();
+        
+        break;
+      }
       case IR.make_bus:
         // at this point all the elements of the bus
         // are already loaded into the BF memory tape.
@@ -307,6 +326,8 @@ class CodeGen {
         }
         this.stack.push(bytesRemoved);
 
+        break;
+      case IR.mutate_bus:
         break;
       case IR.cmp_greater:
       case IR.cmp_less:

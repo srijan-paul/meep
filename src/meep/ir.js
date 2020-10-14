@@ -26,6 +26,7 @@ const IR = Object.freeze({
 	load_string: 24,
 	make_bus: 25,
 	index_var: 26,
+	mutate_bus: 27,
 });
 
 
@@ -58,6 +59,7 @@ function irToString(op) {
 	case IR.load_string: return 'LOAD_STRING';
 	case IR.make_bus: return 'MAKE_BUS';
 	case IR.index_var: return 'INDEX_VAR';
+	case IR.mutate_bus: return 'MUTATE_BUS';
 	}
 }
   module.exports = {IR, irToString};
