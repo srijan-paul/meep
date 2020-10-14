@@ -27,6 +27,7 @@ const IR = Object.freeze({
 	make_bus: 25,
 	index_var: 26,
 	mutate_bus: 27,
+	not: 28,
 });
 
 
@@ -60,6 +61,7 @@ function irToString(op) {
 	case IR.make_bus: return 'MAKE_BUS';
 	case IR.index_var: return 'INDEX_VAR';
 	case IR.mutate_bus: return 'MUTATE_BUS';
+	case IR.not: return 'NOT';
 	}
 }
   module.exports = {IR, irToString};

@@ -63,6 +63,10 @@ class CodeGen {
     return this.stack[index].type;
   }
 
+  stackTop() {
+    return this.stack[this.stack.length - 1];
+  }
+
   // takes the index of a local
   // variable and converts into
   // a stack offset.
@@ -278,7 +282,7 @@ class CodeGen {
         const sizeB = this.sizeOfVal(this.stack.length - 1);
         const sizeA = this.sizeOfVal(this.stack.length - 2);
 
-        if (sizeA != sizeB) {
+        if (sizeA != 1 || sizeB != 1) {
           this.error("'-' operator can only be used on byte sized numbers.");
         }
 
@@ -286,9 +290,20 @@ class CodeGen {
         this.popValue();
         break;
       }
+      case IR.not: {
+        const topValue = this.stackTop();
+        if (topValue.size != 1) {
+          this.error("'!' operator can only be used on byte sized numbers.");
+        }
+        // this is pretty much the same approach as if statements
+        // where we maintain a boolean flag right after the value to be not-ed
+        // in memory , and then get rid of that once done. This is more or less an
+        // if statement really.
+        this.write(">+<[[-]>-<]>[-<+>]<");
+        break;
+      }
       case IR.equals: // pop 2 values off the stack, if they're equal, push 1, else push 0.
-        // https://esolangs.org/wiki/Brainfuck_algorithms#x_.3D_x_.3D.3D_y
-
+        // from here : https://esolangs.org/wiki/Brainfuck_algorithms#x_.3D_x_.3D.3D_y
         this.write("<[->-<]+>[<->[-]]<");
         this.stack.pop();
         break;
@@ -308,7 +323,7 @@ class CodeGen {
         // if the then-block is executed, this flag is set to false.
         this.write("<"); // move the stack pointer one step back [c, 1]
         this.write("["); //                                       ^
-        // after checking with the condition and entering the loop body,
+        // after checking with the condition and entering the then body,
         // move the pointer back to the flag since we don't want to
         // overwrite it with local declarations.
         this.write(">");
@@ -339,9 +354,15 @@ class CodeGen {
         this.popValue();
         break;
       case IR.start_loop:
-        this.write("[");
+        if (this.stackTop().type != DataType.Byte) {
+          this.error("While condition cannot be larger than 1 byte.");
+        }
+        // start the loop and pop the condition off the stack.
+        this.write("["); 
+        this.popValue();
         break;
       case IR.end_loop:
+        // revaluate the condition.
         this.write("]");
         this.popValue(); // pop the condition off.
         break;

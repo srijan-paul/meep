@@ -28,7 +28,33 @@ const test2 = `
     print s1;
 `
 
-const code = test2;
+const test3 = `
+    var i = 9;
+    if i != 0 {
+        print '0' + i;
+        set i = i - 1;
+        if i != 4 {
+            print '0' + i;
+            set i = i - 1;
+            if i != 9 {
+                print '0' + i;
+                if i != 7 {
+                    print 'a';
+                }
+            }
+        }
+    }
+`
+
+const test4 = `
+    var i = 1;
+    while i != 0 {
+        print 'a';
+        set i = i - 1;
+    }
+`
+
+const code = test4;
 
 const tokens = tokenize(code);
 console.log(tokens.map((t) => t.raw));

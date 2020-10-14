@@ -45,6 +45,8 @@ const TType = Object.freeze({
   string: 27,
   comma: 28,
   set: 29,
+  bang: 30,
+  bangeq: 31,
 });
 
 function isAlpha(c) {
@@ -140,6 +142,9 @@ function tfTokenize(source) {
           throw new Error("Empty character literal.");
         expect("'");
         pushToken(TType.char);
+        break;
+      case "!":
+        pushIf("=", TType.bangeq, TType.bang);
         break;
       case '"':
         while (!eof() && source[current] != '"') current++;
@@ -358,9 +363,17 @@ class IRCompiler {
   }
 
   whileStmt() {
+    // hacky.
+    let before = this.ir.length - 1;
     this.expression(); // compile condition.
+    let after = this.ir.length;
     this.emit(IR.start_loop);
     this.statement();
+    // emit the bytes for the condition again
+    // since it needs to be reevaluated.
+    for (let i = before + 1; i < after; i++) {
+      this.emit(this.ir[i]);
+    }
     this.emit(IR.end_loop);
   }
 
@@ -370,9 +383,15 @@ class IRCompiler {
 
   equality() {
     this.comparison();
-    while (this.matchToken(TType.eqeq)) {
+    while (this.matchToken(TType.eqeq, TType.bangeq)) {
+      let neq = this.prev().type == TType.bangeq;
       this.comparison();
       this.emit(IR.equals);
+      //  first check for equality, then not it. It's more like !(a==b)
+      // but efficiency isn't the goal in this toy project soooo....
+      if (neq) {
+        this.emit(IR.not);
+      }
     }
   }
 
@@ -392,6 +411,16 @@ class IRCompiler {
       this.grouping();
       this.emit(op);
     }
+  }
+
+  preUnary() {
+    if (this.matchToken(TType.bang)) {
+      this.grouping();
+      this.emit(IR.not);
+      return;
+    }
+
+    this.grouping();
   }
 
   grouping() {
