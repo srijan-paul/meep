@@ -47,11 +47,21 @@ const test3 = `
 `
 
 const test4 = `
-    var i = 1;
+    var a = 0;
+    var b = 1;
+    var c = 1;
+    var temp = 0;
+    var i = 5;
+
     while i != 0 {
-        print 'a';
+        set temp = b;
+        set b = b + a;
+        set a = temp;
+        set c = b;
         set i = i - 1;
     }
+
+    print '0' + b;
 `
 
 const code = test4;
