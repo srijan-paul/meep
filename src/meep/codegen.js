@@ -1,5 +1,17 @@
 const { IR, irToString } = require("./ir");
 
+const DataType = Object.freeze({
+  Bus: 1,
+  String: 2,
+  Byte: 3,
+});
+
+// a single entry into the compile time
+// stack
+function StackEntry(type, size) {
+  return { type, size };
+}
+
 class CodeGen {
   constructor(irs /* IR opcodes array */) {
     this.code = irs;
@@ -44,7 +56,11 @@ class CodeGen {
   }
 
   sizeOfVal(index) {
-    return this.stack[index];
+    return this.stack[index].size;
+  }
+
+  typeOfVal(index) {
+    return this.stack[index].type;
   }
 
   // takes the index of a local
@@ -65,11 +81,21 @@ class CodeGen {
   // print the value at the top
   // of the stack.
   printValue() {
-    const size = this.sizeOfVal(this.stack.length - 1);
+    let size = this.sizeOfVal(this.stack.length - 1);
+    const type = this.typeOfVal(this.stack.length - 1);
+    let isPadded = false;
 
+    if (type == DataType.String || type == DataType.Bus) {
+      isPadded = true;
+      console.log(size)
+    }
+
+    // if (isPadded) this.write(">>");
     this.write("<".repeat(size - 1));
     this.write(".[-]>".repeat(size - 1) + ".[-]");
     this.write("<".repeat(size));
+    // if (isPadded) this.write("<<");
+
 
     this.stack.pop();
   }
@@ -114,7 +140,7 @@ class CodeGen {
   // in case of strings and arrays.
   // Forunately, it's not that complicated either.
   popValue() {
-    let size = this.stack.pop();
+    let size = this.stack.pop().size;
     this.write("[-]<".repeat(size));
   }
 
@@ -128,7 +154,7 @@ class CodeGen {
 
   pushByte(value) {
     this.write(">" + "+".repeat(value));
-    this.stack.push(1);
+    this.stack.push(StackEntry(DataType.Byte, 1));
   }
 
   // copy a local variable from the given index to the top of the stack
@@ -142,13 +168,14 @@ class CodeGen {
   getVariable(index) {
     const depth = this.getLocalDepth(index); // depth of the local in the stack.
     const memoryOffset = this.getMemoryOffset(depth); // actual depth in BF memory.
-    let size = this.sizeOfVal(index); // how many byes to copy.
+    const size = this.sizeOfVal(index); // how many byes to copy.
+    const type = this.typeOfVal(index);
 
     for (let i = 0; i < size; i++) {
       this.copyByte(memoryOffset, true);
     }
 
-    this.stack.push(size);
+    this.stack.push(StackEntry(type, size));
   }
 
   // pop the value off the top of the stack
@@ -156,16 +183,17 @@ class CodeGen {
   setVariable(index) {
     const depth = this.getLocalDepth(index);
     const memoryOffset = this.getMemoryOffset(depth);
-    let size = this.this.sizeOfVal(index);
+    let size = this.sizeOfVal(index);
   }
 
   loadString(string) {
     const length = string.length;
-    this.stack.push(length);
-
+    this.stack.push(StackEntry(DataType.String, length + 3));
+    this.write(">>"); // two bytes of padding prior
     for (let i = 0; i < length; i++) {
       this.write(">" + "+".repeat(string.charCodeAt(i)));
     }
+    this.write(">"); // 1 byte padding after.
   }
 
   generateOp(op) {
@@ -306,7 +334,7 @@ class CodeGen {
       }
       case IR.set_var: {
         const index = this.next();
-        
+
         break;
       }
       case IR.make_bus:
@@ -322,9 +350,9 @@ class CodeGen {
         let bytesRemoved = 0;
 
         for (let i = 0; i < length; i++) {
-          bytesRemoved += this.stack.pop();
+          bytesRemoved += this.stack.pop().size;
         }
-        this.stack.push(bytesRemoved);
+        this.stack.push(StackEntry(DataType.Bus, bytesRemoved));
 
         break;
       case IR.mutate_bus:

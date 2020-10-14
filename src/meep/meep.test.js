@@ -2,6 +2,7 @@ const { tokenize, IRCompiler } = require("./meep");
 const { printIR } = require("./debug");
 const CodeGen = require("./codegen");
 
+
 let test1 = `
     var endmsg = "\nprogram ended successfully";
     var a = 1;
@@ -17,6 +18,7 @@ let test1 = `
 
     print endmsg;
 `;
+
 
 const code = test1;
 
