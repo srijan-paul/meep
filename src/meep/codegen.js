@@ -75,7 +75,7 @@ class CodeGen {
     for (let i = depth; i >= 0; i--) {
       offset += this.sizeOfVal(this.stack.length - i - 1);
     }
-    return offset;
+    return offset - 1;
   }
 
   // print the value at the top
@@ -87,7 +87,6 @@ class CodeGen {
 
     if (type == DataType.String || type == DataType.Bus) {
       isPadded = true;
-      console.log(size)
     }
 
     // if (isPadded) this.write(">>");
@@ -95,7 +94,6 @@ class CodeGen {
     this.write(".[-]>".repeat(size - 1) + ".[-]");
     this.write("<".repeat(size));
     // if (isPadded) this.write("<<");
-
 
     this.stack.pop();
   }
@@ -113,23 +111,23 @@ class CodeGen {
       this.pushByte(0);
     }
 
-    this.write("<".repeat(depth)); // go to the variable's slot
+    this.write("<".repeat(depth + 1)); // go to the variable's slot
     this.write("["); // repeat until the slot is 0.
-    this.write(">".repeat(depth)); // go to top of stack
+    this.write(">".repeat(depth + 1)); // go to top of stack
     this.write("+"); // increment the value at the top.
     this.write(">+"); // go one step forward, and increment that value too.
-    this.write("<".repeat(depth + 1)); // go back to slot
+    this.write("<".repeat(depth + 2)); // go back to slot
     this.write("-"); // decrement.
-    this.write("]" + ">".repeat(depth + 1)); // exit when the variable slot is zero.
+    this.write("]" + ">".repeat(depth + 2)); // exit when the variable slot is zero.
 
     // after the move, our stack is : [0, ... a, a]
     //                                           ^
 
     // now we want to copy the topmost a back into the original slot.
     this.write("["); // start loop, stop when the data ptr is 0
-    this.write("<".repeat(depth + 1)); // go to the original slot which is now 0.
+    this.write("<".repeat(depth + 2)); // go to the original slot which is now 0.
     this.write("+"); // increment it.
-    this.write(">".repeat(depth + 1)); // come back to the copy
+    this.write(">".repeat(depth + 2)); // come back to the copy
     this.write("-"); // decrement.
     this.write("]<"); // repeat until copy is 0. and then pop it.
   }
@@ -152,6 +150,21 @@ class CodeGen {
     this.popValue();
   }
 
+  // set a byte at the given depth to value at the top of the stack, and pop.
+  // Useful for mutating local variables. Note that this does NOT pop
+  // the value from the compile-time stack, only zeroes it out and moves the BF data pointer
+  // one step back.
+  setByte(depth) {
+    this.write("<".repeat(depth) + "[-]"); // go the value, and zero it
+    this.write(">".repeat(depth)); // go back to the top of the stack
+    this.write("["); // repeat until the value at tope is 0
+    this.write(`-${"<".repeat(depth)}+${">".repeat(depth)}`); // decrement the stack-top and increment the target byte
+    this.write("]"); // end loop.
+    this.write("<"); // move pointer one step back.
+  }
+
+  // Push a byte to the top of the compile time stack, and also emit
+  // BF code to do the same at runtime.
   pushByte(value) {
     this.write(">" + "+".repeat(value));
     this.stack.push(StackEntry(DataType.Byte, 1));
@@ -181,9 +194,24 @@ class CodeGen {
   // pop the value off the top of the stack
   // set the variable at slot "index" to this value
   setVariable(index) {
-    const depth = this.getLocalDepth(index);
-    const memoryOffset = this.getMemoryOffset(depth);
-    let size = this.sizeOfVal(index);
+    // how far down the value is, in the compile time stack.
+    const slot = this.getLocalDepth(index);
+    // how far down the first byte of the variable will be in BF memory-tape
+    const memoryOffset = this.getMemoryOffset(slot);
+    console.log("offset: ", memoryOffset);
+    const size = this.sizeOfVal(index);
+
+    let stackTopSize = this.sizeOfVal(this.stack.length - 1);
+    if (size != stackTopSize) {
+      this.error(
+        `Cannot assign value of size ${size} to value of size ${stackTopSize}`
+      );
+    }
+
+    for (let i = 0; i < size; i++) {
+      this.setByte(memoryOffset - size + 1);
+    }
+    this.stack.pop();
   }
 
   loadString(string) {
@@ -333,8 +361,8 @@ class CodeGen {
         break;
       }
       case IR.set_var: {
-        const index = this.next();
-
+        const varIndex = this.next();
+        this.setVariable(varIndex);
         break;
       }
       case IR.make_bus:
@@ -359,7 +387,7 @@ class CodeGen {
         break;
       case IR.cmp_greater:
       case IR.cmp_less:
-        throw new Error("comparison operators not yet implemented.");
+        this.error("comparison operators not yet implemented.");
         break;
       default:
         throw new Error("Unhandled IR code.");

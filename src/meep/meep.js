@@ -314,7 +314,7 @@ class IRCompiler {
 
   setStmt() {
     let setOp = IR.set_var;
-    let varname = this.expect(TType.id);
+    const varname = this.expect(TType.id);
     const localIndex = this.getVar(varname.raw);
 
     if (this.matchToken(TType.lbrac)) {
@@ -322,6 +322,9 @@ class IRCompiler {
       this.expression();
       this.expect(TType.rbrac);
     }
+
+    this.expect(TType.eq, "Expected '='");
+    this.expression();
 
     this.emit(setOp, localIndex);
   }

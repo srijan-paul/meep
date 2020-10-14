@@ -20,7 +20,15 @@ let test1 = `
 `;
 
 
-const code = test1;
+const test2 = `
+    var s1 = "abcd";
+    print s1;
+    var a = 1;
+    set s1 = "wxyz";
+    print s1;
+`
+
+const code = test2;
 
 const tokens = tokenize(code);
 console.log(tokens.map((t) => t.raw));
