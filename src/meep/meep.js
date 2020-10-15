@@ -47,6 +47,7 @@ const TType = Object.freeze({
   set: 29,
   bang: 30,
   bangeq: 31,
+  bus: 32,
 });
 
 function isAlpha(c) {
@@ -68,6 +69,7 @@ const tfKeywords = new Map([
   ["false", TType._false],
   ["print", TType.print],
   ["set", TType.set],
+  ["bus", TType.bus],
 ]);
 
 function tfTokenize(source) {
@@ -132,6 +134,12 @@ function tfTokenize(source) {
         break;
       case "}":
         pushToken(TType.rbrace);
+        break;
+      case "[":
+        pushToken(TType.lbrac);
+        break;
+      case "]":
+        pushToken(TType.rbrac);
         break;
       case ",":
         pushToken(TType.comma);
@@ -324,8 +332,9 @@ class IRCompiler {
 
     if (this.matchToken(TType.lbrac)) {
       setOp = IR.mutate_bus;
-      this.expression();
+      this.expression(); // index
       this.expect(TType.rbrac);
+      this.emit(IR.prepare_index); // this instruction has the worst name.
     }
 
     this.expect(TType.eq, "Expected '='");
@@ -446,17 +455,35 @@ class IRCompiler {
     } else if (token.type == TType.char) {
       this.emit(IR.load_byte, token.raw.charCodeAt(1));
     } else if (token.type == TType.id) {
-      let slot = this.getVar(token.raw);
+      // index expression (a[123]) or identifier.
+      // precedence for [] in meep is different
+      // from other languages, it's the highest binding infix, and
+      // is only allowed right after identifiers.
+      const slot = this.getVar(token.raw);
 
       if (slot == -1) {
-        throw new Error("Unable to find variable " + token.raw);
+        throw new Error("Undefined variable " + token.raw);
       }
 
-      this.emit(IR.get_var, slot);
+      let op = IR.get_var;
+
+      if (this.matchToken(TType.lbrac)) {
+        this.expression();
+        op = IR.index_var;
+        this.expect(TType.rbrac, "Expected ']'");
+      }
+
+      this.emit(op, slot);
     } else if (token.type == TType.string) {
       this.emit(IR.load_string, token.raw.substring(1, token.raw.length - 1));
     } else if (token.type == TType.lbrace) {
       this.busLiteral();
+    } else if (token.type == TType.bus) {
+      const size = this.expect(
+        TType.number,
+        "Expected a number literal as bus size."
+      ).value;
+      this.emit(IR.make_sized_bus, size);
     } else {
       throw new Error(`CompileError: Unexpected '${token.raw}' token.`);
     }
@@ -466,13 +493,35 @@ class IRCompiler {
   // var mybus  = {1, 2, "Abc"} will reduce down the mybus variable
   // to an aggregate of 6 bytes, as if it were an array like [1, 2, 3, 'a', 'b', 'c']
   busLiteral() {
-    let length = 0;
+    let length = 3; // initally just assume the bus is as big as it's padding.
+    this.emit(IR.false_, IR.false_); // 2 bytes of padding prior
     while (!(this.eof() || this.matchToken(TType.rbrace))) {
-      this.expression();
+      this.busElement();
       length++;
       this.matchToken(TType.comma);
     }
+    this.emit(IR.false_); // 1 byte padding at the end.
     this.emit(IR.make_bus, length);
+    // the bus in memory looks like 0 0 member-1 member-2... member-3 0
+  }
+
+  busElement() {
+    if (this.checkToken(TType.number)) {
+      let n = parseInt(this.next().raw);
+      this.emit(IR.load_byte, n);
+    } else if (this.checkToken(TType.char)) {
+      this.emit(IR.load_byte, this.next().raw.charCodeAt(1));
+    } else if (this.checkToken(TType.id)) {
+      const name = this.next();
+      const slot = this.getVar(name.raw);
+
+      if (slot == -1) {
+        throw new Error(`Undefined variable ${name.raw}`);
+      }
+      this.emit(IR.get_var, slot);
+    } else {
+      throw new Error("Bus literal can only contain numbers or characters.");
+    }
   }
 }
 

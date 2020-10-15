@@ -64,7 +64,24 @@ const test4 = `
     print '0' + b;
 `
 
-const code = test4;
+const test5 = `
+    var s = "abcd\n";
+    var s2 = {'a', 'b'};
+    print s;
+    print s;
+`
+
+const test6 = `
+    var a = {'a', 'b', 'c'};
+    var c1 = a[0] + 3;
+    var c2 = a[1] + 3;
+    var c3 = a[2] + 3;
+    print c1;
+    print c2;
+    print c3;
+`
+
+const code = test6;
 
 const tokens = tokenize(code);
 console.log(tokens.map((t) => t.raw));

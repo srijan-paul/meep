@@ -6,8 +6,7 @@ function printIR(ops) {
     switch (op) {
       case IR.load_byte:
       case IR.load_string:
-        console.log(irToString(op));
-        console.log(ops[++i]);
+        console.log(irToString(op), ops[++i]);
         break;
       case IR.true_:
         console.log("TRUE");
@@ -16,12 +15,10 @@ function printIR(ops) {
         console.log("FALSE");
         break;
       case IR.get_var:
-        console.log("GET_VAR");
-        console.log(ops[++i]);
-        break;
       case IR.set_var:
-        console.log("SET VAR");
-        console.log(ops[++i]);
+      case IR.make_bus:
+      case IR.index_var:
+        console.log(irToString(op), ops[++i]);
         break;
       default:
         console.log(irToString(op));

@@ -47,12 +47,16 @@ class CodeGen {
     return this.code[this.current++];
   }
 
+  printStack() {
+    console.log(this.stack.map(e => e.size));
+  }
+
   generate() {
     while (this.current < this.code.length) {
       let op = this.next();
       this.generateOp(op);
     }
-    this.formatCode()
+    this.formatCode();
     return this.out;
   }
 
@@ -85,6 +89,24 @@ class CodeGen {
       offset += this.sizeOfVal(this.stack.length - i - 1);
     }
     return offset - 1;
+  }
+
+  // get the BF memory offset (depth from top)
+  // of a bus or string variable's
+  offsetOf(variable, index) {
+    const slot = this.getLocalDepth(variable);
+    const depth = this.getMemoryOffset(slot);
+    const size = this.sizeOfVal(variable);
+
+    if (this.stackTop().size != 1) {
+      this.error(
+        "Cannot assign value larger than 1 byte to bus or string index."
+      );
+    } else if (size != 1) {
+      this.error("cannot index a variable that is not a bus or string.");
+    }
+
+    return depth + index + 2; // account for 2 bytes of padding prior.
   }
 
   // print the value at the top
@@ -222,6 +244,23 @@ class CodeGen {
     this.stack.pop();
   }
 
+  // change a single byte in a local variable to the value on top of the stack
+  // and pop it.
+  // index: index of the local variable in the stack.
+  changeByte(index) {
+    const slot = this.getLocalDepth(slot);
+    const memoryDepth = this.getMemoryOffset(slot);
+    const size = this.sizeOfVal(index);
+
+    let stackTopSize = this.sizeOfVal(this.stack.length - 1);
+
+    if (stackTopSize != 1) {
+      this.error(`Cannot assign value larger than one byte to a bus index.s`);
+    }
+
+    this.setByte(memoryDepth - size + 1);
+  }
+
   loadString(string) {
     const length = string.length;
     this.stack.push(StackEntry(DataType.String, length + 3));
@@ -234,10 +273,11 @@ class CodeGen {
 
   generateOp(op) {
     switch (op) {
-      case IR.load_byte:
-        let value = this.next();
+      case IR.load_byte: {
+        const value = this.next();
         this.pushByte(value);
         break;
+      }
       case IR.load_string:
         this.loadString(this.next());
         break;
@@ -390,7 +430,7 @@ class CodeGen {
         this.setVariable(varIndex);
         break;
       }
-      case IR.make_bus:
+      case IR.make_bus: {
         // at this point all the elements of the bus
         // are already loaded into the BF memory tape.
         // So all that needs to be done is to modify the
@@ -408,8 +448,60 @@ class CodeGen {
         this.stack.push(StackEntry(DataType.Bus, bytesRemoved));
 
         break;
-      case IR.mutate_bus:
+      }
+      case IR.make_sized_bus: {
+        const size = this.next(); // size is already padded with 0s
+        this.stack.push(StackEntry(DataType.Bus, size));
+        this.write(">".repeat(size));
         break;
+      }
+      case IR.prepare_index: {
+      }
+      case IR.index_var: {
+        // index operation a[x], where a is a string or a bus.
+        // x is at the top of the stack
+        // The way I index variables a bit hacky, like everything in brainfuck.
+        // I use this little piece of code that turns the following:
+        // [...2, 0, 0, ...]
+        //     ^
+        // into the following:
+        // [...1, 1, 0]
+        //           ^
+        // Basically, take a value X off the stack's top, then move
+        // exactly X steps forward in the memory tape. Now, since the depth
+        // of the variable (array or string) is known, we can jump
+        // back exactly that much distance, and instead of ending up
+        // at the 0th element, end up at the Xth index.
+
+        // I'll come to the snippet below later, for now let's just say it plants a "marker"
+        // basically, the current state of the memory is [..., *x*], It changes the state to
+        // [..., 0, *x*].
+        this.write("[->+<]>");
+        this.write("[[->+<]+>-]+"); // <- the magic is here, pretty straightforward.
+        const variableIndex = this.next();
+        // distance from top in the compile time stack
+        const depth = this.getLocalDepth(variableIndex);
+        // distance from the rightmost used memory cell in the Brainfuck memory tape.
+        const bfDepth = this.getMemoryOffset(depth);
+        // go the byte and copy to top of the tape. +1 to accomodate
+        // for the 0 marker I planted.
+        this.copyByte(bfDepth - 1); // -2 to accomodate for the padding prior, and a +1 for the marker
+        // Now the variable that we copied doesn't exactly live at the top,
+        // it's at an offset since we moved the data pointer a bit to dive back into the array.
+        // [...<top>, 0, 1, 1 , value]
+        //                        ^
+        // But we know that all that lies between the actual stack top and
+        // the current location is a series of ones. So, we use
+        // a variation of the same trick we used above
+        // to go back the marker (0) I planted above ^.
+        this.write("<[->[-<+>]<<]>[-<+>]<");
+        this.stack.pop(); // pop the 1 byte index off the compile time stack.
+        break;
+      }
+      case IR.mutate_bus: {
+        // the the next instruction is the index of the bus in the local stack.
+        break;
+      }
       case IR.cmp_greater:
       case IR.cmp_less:
         this.error("comparison operators not yet implemented.");
