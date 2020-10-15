@@ -31,6 +31,10 @@ class CodeGen {
     this.stack = [];
   }
 
+  formatCode() {
+    this.out = this.out.match(/.{1,80}/g).join("\n");
+  }
+
   write(str) {
     this.out += str;
   }
@@ -48,6 +52,7 @@ class CodeGen {
       let op = this.next();
       this.generateOp(op);
     }
+    this.formatCode()
     return this.out;
   }
 
@@ -202,7 +207,6 @@ class CodeGen {
     const slot = this.getLocalDepth(index);
     // how far down the first byte of the variable will be in BF memory-tape
     const memoryOffset = this.getMemoryOffset(slot);
-    console.log("offset: ", memoryOffset);
     const size = this.sizeOfVal(index);
 
     let stackTopSize = this.sizeOfVal(this.stack.length - 1);
@@ -358,7 +362,7 @@ class CodeGen {
           this.error("While condition cannot be larger than 1 byte.");
         }
         // start the loop and pop the condition off the stack.
-        this.write("["); 
+        this.write("[");
         this.popValue();
         break;
       case IR.end_loop:
