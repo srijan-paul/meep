@@ -8,16 +8,11 @@ function printIR(ops) {
       case IR.load_string:
         console.log(irToString(op), ops[++i]);
         break;
-      case IR.true_:
-        console.log("TRUE");
-        break;
-      case IR.false_:
-        console.log("FALSE");
-        break;
       case IR.get_var:
       case IR.set_var:
       case IR.make_bus:
       case IR.index_var:
+      case IR.mutate_bus:
         console.log(irToString(op), ops[++i]);
         break;
       default:

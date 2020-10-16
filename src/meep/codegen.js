@@ -48,7 +48,7 @@ class CodeGen {
   }
 
   printStack() {
-    console.log(this.stack.map(e => e.size));
+    console.log(this.stack.map((e) => e.size));
   }
 
   generate() {
@@ -70,6 +70,11 @@ class CodeGen {
 
   typeOfVal(index) {
     return this.stack[index].type;
+  }
+
+  isIndexable(index) {
+    const type = this.typeOfVal(index);
+    return type == DataType.String || type == DataType.Bus;
   }
 
   stackTop() {
@@ -244,22 +249,6 @@ class CodeGen {
     this.stack.pop();
   }
 
-  // change a single byte in a local variable to the value on top of the stack
-  // and pop it.
-  // index: index of the local variable in the stack.
-  changeByte(index) {
-    const slot = this.getLocalDepth(slot);
-    const memoryDepth = this.getMemoryOffset(slot);
-    const size = this.sizeOfVal(index);
-
-    let stackTopSize = this.sizeOfVal(this.stack.length - 1);
-
-    if (stackTopSize != 1) {
-      this.error(`Cannot assign value larger than one byte to a bus index.s`);
-    }
-
-    this.setByte(memoryDepth - size + 1);
-  }
 
   loadString(string) {
     const length = string.length;
@@ -456,6 +445,7 @@ class CodeGen {
         break;
       }
       case IR.prepare_index: {
+        break;
       }
       case IR.index_var: {
         // index operation a[x], where a is a string or a bus.
@@ -479,6 +469,10 @@ class CodeGen {
         this.write("[->+<]>");
         this.write("[[->+<]+>-]+"); // <- the magic is here, pretty straightforward.
         const variableIndex = this.next();
+
+        if (!this.isIndexable(variableIndex)) {
+          this.error("Cannot index a value which is not an bus or a string.");
+        }
         // distance from top in the compile time stack
         const depth = this.getLocalDepth(variableIndex);
         // distance from the rightmost used memory cell in the Brainfuck memory tape.
@@ -500,6 +494,22 @@ class CodeGen {
       }
       case IR.mutate_bus: {
         // the the next instruction is the index of the bus in the local stack.
+        const varIndex = this.next();
+
+        if (!this.isIndexable(varIndex)) {
+          this.error("Cannot index a value which is not an bus or a string.");
+        }
+
+        // distance from top in compile time stack.
+        const stackDepth = this.getLocalDepth(varIndex);
+        // distance from the top in brainfuck memory tape
+        const bfDepth = this.getMemoryOffset(stackDepth);
+        this.write("[->+<]<[->+<]>>"); // set a cell to 0 as a marker
+        this.write("[[->+<]>-<<[->+<]+>>]<"); // move the value 'index' cells to the right
+        this.stack.pop(); // pop the index, since the data pointer is now set properly.
+        this.setByte(bfDepth - 2); // -2 to compensate for the padding in arrays.
+        this.write("[-<]<");
+        this.stack.pop(); // pop the value of the stack.
         break;
       }
       case IR.cmp_greater:

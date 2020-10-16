@@ -73,15 +73,22 @@ const test5 = `
 
 const test6 = `
     var a = {'a', 'b', 'c'};
-    var c1 = a[0] + 3;
-    var c2 = a[1] + 3;
-    var c3 = a[2] + 3;
-    print c1;
-    print c2;
-    print c3;
+    var i = 0;
+    while (i != 3) {
+        print a[i];
+        set i = i + 1;
+    }
 `
 
-const code = test6;
+const test7 = `
+    var v = 'd'; 
+    var a = {'a', 'b', 'c'};
+    var i = 2 - 1;
+    set a[i] = v;
+    print a[i];
+`
+
+const code = test7;
 
 const tokens = tokenize(code);
 console.log(tokens.map((t) => t.raw));

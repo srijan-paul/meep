@@ -326,21 +326,33 @@ class IRCompiler {
   }
 
   setStmt() {
-    let setOp = IR.set_var;
-    const varname = this.expect(TType.id);
+    const varname = this.expect(TType.id, "Expected variable name.");
     const localIndex = this.getVar(varname.raw);
 
+    if (localIndex == -1) {
+      throw new Error("undefined variable ", varname.raw);
+    }
+
     if (this.matchToken(TType.lbrac)) {
-      setOp = IR.mutate_bus;
+      const beforeExp = this.ir.length;
       this.expression(); // index
-      this.expect(TType.rbrac);
-      this.emit(IR.prepare_index); // this instruction has the worst name.
+      const afterExp = this.ir.length;
+      const indexInstructions = this.ir.splice(
+        beforeExp,
+        afterExp - beforeExp
+      );
+      this.expect(TType.rbrac, "Expected ']'");
+      this.expect(TType.eq, "Expected '='");
+      this.expression(); // value
+      this.ir.push(...indexInstructions);
+      this.emit(IR.mutate_bus, localIndex);
+      return;
     }
 
     this.expect(TType.eq, "Expected '='");
     this.expression();
 
-    this.emit(setOp, localIndex);
+    this.emit(IR.set_var, localIndex);
   }
 
   printStmt() {
@@ -502,6 +514,7 @@ class IRCompiler {
     }
     this.emit(IR.false_); // 1 byte padding at the end.
     this.emit(IR.make_bus, length);
+    console.log("length of the bus is: ", length);
     // the bus in memory looks like 0 0 member-1 member-2... member-3 0
   }
 
