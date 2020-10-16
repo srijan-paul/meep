@@ -12,7 +12,8 @@ function printIR(ops) {
       case IR.set_var:
       case IR.make_bus:
       case IR.index_var:
-      case IR.mutate_bus:
+      case IR.set_at_index:
+      case IR.make_sized_bus:
         console.log(irToString(op), ops[++i]);
         break;
       default:

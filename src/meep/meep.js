@@ -48,6 +48,7 @@ const TType = Object.freeze({
   bang: 30,
   bangeq: 31,
   bus: 32,
+  input: 33,
 });
 
 function isAlpha(c) {
@@ -70,6 +71,7 @@ const tfKeywords = new Map([
   ["print", TType.print],
   ["set", TType.set],
   ["bus", TType.bus],
+  ["input", TType.input],
 ]);
 
 function tfTokenize(source) {
@@ -321,7 +323,7 @@ class IRCompiler {
     if (this.matchToken(TType.eq)) {
       this.expression();
     } else {
-      this.emit(0);
+      this.emit(IR.load_byte, 0);
     }
   }
 
@@ -337,15 +339,12 @@ class IRCompiler {
       const beforeExp = this.ir.length;
       this.expression(); // index
       const afterExp = this.ir.length;
-      const indexInstructions = this.ir.splice(
-        beforeExp,
-        afterExp - beforeExp
-      );
+      const indexInstructions = this.ir.splice(beforeExp, afterExp - beforeExp);
       this.expect(TType.rbrac, "Expected ']'");
       this.expect(TType.eq, "Expected '='");
       this.expression(); // value
       this.ir.push(...indexInstructions);
-      this.emit(IR.mutate_bus, localIndex);
+      this.emit(IR.set_at_index, localIndex);
       return;
     }
 
@@ -398,6 +397,8 @@ class IRCompiler {
     this.emit(IR.end_loop);
   }
 
+  inputStmt() {}
+
   expression() {
     this.equality();
   }
@@ -408,7 +409,7 @@ class IRCompiler {
       let neq = this.prev().type == TType.bangeq;
       this.comparison();
       this.emit(IR.equals);
-      //  first check for equality, then not it. It's more like !(a==b)
+      // first check for equality, then not it. It's more like !(a==b)
       // but efficiency isn't the goal in this toy project soooo....
       if (neq) {
         this.emit(IR.not);
@@ -491,11 +492,12 @@ class IRCompiler {
     } else if (token.type == TType.lbrace) {
       this.busLiteral();
     } else if (token.type == TType.bus) {
-      const size = this.expect(
-        TType.number,
-        "Expected a number literal as bus size."
-      ).value;
-      this.emit(IR.make_sized_bus, size);
+      const size = parseInt(
+        this.expect(TType.number, "Expected a number literal as bus size.").raw
+      );
+      this.emit(IR.make_sized_bus, size + 3); // 3 extra for padding
+    } else if (token.type == TType.input) {
+      this.emit(IR.input);
     } else {
       throw new Error(`CompileError: Unexpected '${token.raw}' token.`);
     }

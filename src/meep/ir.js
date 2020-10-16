@@ -26,10 +26,10 @@ const IR = Object.freeze({
 	load_string: 24,
 	make_bus: 25,
 	index_var: 26,
-	mutate_bus: 27,
-	not: 28,
-	make_sized_bus: 29,
-	prepare_index: 30,
+	not: 27,
+	make_sized_bus: 28,
+	set_at_index: 29,
+	input: 30,
 });
 
 
@@ -62,10 +62,10 @@ function irToString(op) {
 	case IR.load_string: return 'LOAD_STRING';
 	case IR.make_bus: return 'MAKE_BUS';
 	case IR.index_var: return 'INDEX_VAR';
-	case IR.mutate_bus: return 'MUTATE_BUS';
 	case IR.not: return 'NOT';
 	case IR.make_sized_bus: return 'MAKE_SIZED_BUS';
-	case IR.prepare_index: return 'PREPARE_INDEX';
+	case IR.set_at_index: return 'SET_AT_INDEX';
+	case IR.input: return 'INPUT';
 	}
 }
   module.exports = {IR, irToString};

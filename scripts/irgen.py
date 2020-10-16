@@ -12,7 +12,7 @@ IR = """
   load_byte print start_if close_if_body
   end_if start_else end_else start_loop end_loop
   popn cmp_less cmp_greater load_string make_bus
-  index_var mutate_bus not make_sized_bus set_at_index
+  index_var not make_sized_bus set_at_index input
 """
 
 opcodes = re.findall(r"\w+", IR)

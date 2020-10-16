@@ -249,7 +249,6 @@ class CodeGen {
     this.stack.pop();
   }
 
-
   loadString(string) {
     const length = string.length;
     this.stack.push(StackEntry(DataType.String, length + 3));
@@ -444,9 +443,6 @@ class CodeGen {
         this.write(">".repeat(size));
         break;
       }
-      case IR.prepare_index: {
-        break;
-      }
       case IR.index_var: {
         // index operation a[x], where a is a string or a bus.
         // x is at the top of the stack
@@ -492,7 +488,7 @@ class CodeGen {
         this.stack.pop(); // pop the 1 byte index off the compile time stack.
         break;
       }
-      case IR.mutate_bus: {
+      case IR.set_at_index: {
         // the the next instruction is the index of the bus in the local stack.
         const varIndex = this.next();
 
@@ -512,6 +508,10 @@ class CodeGen {
         this.stack.pop(); // pop the value of the stack.
         break;
       }
+      case IR.input:
+        this.write(">,");
+        this.stack.push(StackEntry(DataType.Byte, 1));
+        break;
       case IR.cmp_greater:
       case IR.cmp_less:
         this.error("comparison operators not yet implemented.");
