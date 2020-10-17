@@ -49,6 +49,7 @@ const TType = Object.freeze({
   bangeq: 31,
   bus: 32,
   input: 33,
+  len: 34,
 });
 
 function isAlpha(c) {
@@ -72,6 +73,7 @@ const tfKeywords = new Map([
   ["set", TType.set],
   ["bus", TType.bus],
   ["input", TType.input],
+  ["len", TType.len],
 ]);
 
 function tfTokenize(source) {
@@ -145,6 +147,10 @@ function tfTokenize(source) {
         break;
       case ",":
         pushToken(TType.comma);
+        break;
+      case "/":
+        expect("/");
+        while (!eof() && source[current++] != "\n");
         break;
       case "'":
         if (eof()) throw new Error("Unterminated character literal.");
@@ -317,7 +323,10 @@ class IRCompiler {
       );
     }
 
-    const name = this.expect(TType.id);
+    const name = this.expect(
+      TType.id,
+      "Expected variable name, got " + this.lookAhead().raw
+    );
     this.addSymbol(name.raw);
 
     if (this.matchToken(TType.eq)) {
@@ -510,7 +519,7 @@ class IRCompiler {
     let length = 3; // initally just assume the bus is as big as it's padding.
     this.emit(IR.false_, IR.false_); // 2 bytes of padding prior
     while (!(this.eof() || this.matchToken(TType.rbrace))) {
-      this.busElement();
+      this.atom();
       length++;
       this.matchToken(TType.comma);
     }
@@ -520,7 +529,7 @@ class IRCompiler {
     // the bus in memory looks like 0 0 member-1 member-2... member-3 0
   }
 
-  busElement() {
+  atom() {
     if (this.checkToken(TType.number)) {
       let n = parseInt(this.next().raw);
       this.emit(IR.load_byte, n);

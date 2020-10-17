@@ -1,4 +1,0 @@
-val a = 1;
-val b = 3;
-
-val c = a + b;

@@ -2,12 +2,13 @@ const { tokenize, IRCompiler } = require("./src/meep");
 const CodeGen = require("./src/codegen");
 const fs = require("fs");
 
-if (process.argv.length != 0) {
+if (process.argv.length != 4) {
+  console.log(process.argv);
   console.log(`usage: meep path/to/file.meep path/to/output.bf`);
 } else {
-  const fPath = process.argv[0];
-  const destPath = process.argv[1];
-  fs.readFile(fPath, (err, data) => {
+  const fPath = process.argv[2];
+  const destPath = process.argv[3];
+  fs.readFile(fPath, "utf-8", (err, data) => {
     if (err) throw err;
     else toBf(destPath, data);
   });

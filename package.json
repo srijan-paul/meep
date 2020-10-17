@@ -1,0 +1,23 @@
+{
+  "name": "meep",
+  "version": "1.0.0",
+  "description": "A very simple language that compiles to brainfuck.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srijan-paul/BFinBF.git"
+  },
+  "keywords": ["Compiler", "Brainfuck"],
+  "author": "Srijan Paul",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/srijan-paul/BFinBF/issues"
+  },
+  "homepage": "https://github.com/srijan-paul/BFinBF#readme"
+}
