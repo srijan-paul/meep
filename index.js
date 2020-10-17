@@ -1,6 +1,5 @@
-const { tokenize, IRCompiler } = require("./meep");
-const { printIR } = require("./debug");
-const CodeGen = require("./codegen");
+const { tokenize, IRCompiler } = require("./src/meep");
+const CodeGen = require("./src/codegen");
 const fs = require("fs");
 
 if (process.argv.length != 0) {
