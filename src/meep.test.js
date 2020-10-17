@@ -107,19 +107,25 @@ const test10 = `
 
     var i = 0;
     var c;
+    var bctr = 0;
     while (i != len) {
         set c = code[i];
         if (c == '>')      set mptr = mptr + 1;
         else if (c == '<') set mptr = mptr - 1;
         else if (c == '+') set memory[mptr] = memory[mptr] + 1;
         else if (c == '.') print memory[mptr];
-        else if (c == ',') memory[mptr] = input;
+        else if (c == ',') set memory[mptr] = input;
         else if (c == '[') {
-            if (memory[mptr] != 0) {
-                
+            if memory[mptr] == 0 {
+                set i = i + 1;
+                while (code[i] != ']') + (bctr != 0) != 0 {
+                    if code[i] == '['
+                        set bctr = bctr + 1;
+                    else if code[i] == ']'
+                        set bctr = bctr - 1;
+                    set i = i + 1;
+                }
             } 
-        } else if c == ']' {
-
         }
         set i = i + 1;
     }
