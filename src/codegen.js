@@ -1,3 +1,4 @@
+const { printIR } = require("./debug");
 const { IR, irToString } = require("./ir");
 
 const DataType = Object.freeze({
@@ -512,9 +513,20 @@ class CodeGen {
         this.write(">,");
         this.stack.push(StackEntry(DataType.Byte, 1));
         break;
+      case IR.len: {
+        const varIndex = this.next();
+        
+        if (!this.isIndexable(varIndex)) {
+          this.error("'len' operator can only be used on strings and buses.");
+        }
+        
+        const size = this.sizeOfVal(varIndex) - 3; // remove 3 bytes of padding.
+        this.pushByte(size);
+        break;
+      }
       case IR.cmp_greater:
       case IR.cmp_less:
-        this.error("comparison operators not yet implemented.");
+        this.error("comparison operators are not supported.");
         break;
       default:
         throw new Error("Unhandled IR code.");

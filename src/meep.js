@@ -507,6 +507,17 @@ class IRCompiler {
       this.emit(IR.make_sized_bus, size + 3); // 3 extra for padding
     } else if (token.type == TType.input) {
       this.emit(IR.input);
+    } else if (token.type == TType.len) {
+      let eatParen = false;
+      if (this.matchToken(TType.lparen)) eatParen = true;
+
+      const name = this.expect(TType.id, "Expected variable name.").raw;
+      const slot = this.getVar(name);
+
+      if (slot == -1) throw new Error("undefined variable " + name);
+      if (eatParen) this.expect(TType.rparen, "Expected ')'");
+
+      this.emit(IR.len, slot);
     } else {
       throw new Error(`CompileError: Unexpected '${token.raw}' token.`);
     }
@@ -543,8 +554,27 @@ class IRCompiler {
         throw new Error(`Undefined variable ${name.raw}`);
       }
       this.emit(IR.get_var, slot);
+    } else if (this.matchToken(TType.len)) {
+      let eatParen = false;
+      if (this.matchToken(TType.lparen)) eatParen = true;
+
+      const name = this.expect(TType.id, "Expected variable name.").raw;
+      const slot = this.getVar(name);
+
+      if (slot == -1) throw new Error("undefined variable " + name);
+      if (eatParen) this.expect(TType.rparen, "Expected ')'");
+
+      this.emit(IR.len, slot);
+    } else if (this.matchToken(TType._false)) {
+      this.emit(IR.false_);
+    } else if (this.matchToken(TType._true)) {
+      this.emit(IR.true_);
+    } else if (this.matchToken(TType.input)) {
+      this.emit(IR.input);
     } else {
-      throw new Error("Bus literal can only contain numbers or characters.");
+      throw new Error(
+        "Bus literal can only contain numbers, or character constants."
+      );
     }
   }
 }

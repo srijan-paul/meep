@@ -13,11 +13,12 @@ IR = """
   end_if start_else end_else start_loop end_loop
   popn cmp_less cmp_greater load_string make_bus
   index_var not make_sized_bus set_at_index input
+  len
 """
 
 opcodes = re.findall(r"\w+", IR)
 
-irFile = open('../src/meep/ir.js', 'w')
+irFile = open('../src/ir.js', 'w')
 
 out = "const IR = Object.freeze({\n"
 

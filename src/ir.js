@@ -30,6 +30,7 @@ const IR = Object.freeze({
 	make_sized_bus: 28,
 	set_at_index: 29,
 	input: 30,
+	len: 31,
 });
 
 
@@ -66,6 +67,7 @@ function irToString(op) {
 	case IR.make_sized_bus: return 'MAKE_SIZED_BUS';
 	case IR.set_at_index: return 'SET_AT_INDEX';
 	case IR.input: return 'INPUT';
+	case IR.len: return 'LEN';
 	}
 }
   module.exports = {IR, irToString};
