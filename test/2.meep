@@ -1,2 +1,5 @@
-var a = 1; // comment
-var b = 2;
+var a = 'a'; // comment
+var b = 'b';
+
+print b;
+print a;
