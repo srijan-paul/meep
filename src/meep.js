@@ -1,14 +1,4 @@
-// This is the interpreter for the TF (The fuck ?) programming language.
-// The-fuck? isn't meant to be usable as a proper language by any means,
-// since we only need this as an intermediate to compile to brainfuck,
-// I'll keep it simple.
-
-// T-f has:
-// variable declaration
-// two arithmetic operators + -
-// if-statements
-// while-loops
-// numbers and characters
+// Front end for the meep programming language
 
 // Tokenizer
 
@@ -62,7 +52,7 @@ function isDigit(c) {
   return ascii >= 48 && ascii <= 57;
 }
 
-const tfKeywords = new Map([
+const Keywords = new Map([
   ["var", TType.var],
   ["if", TType._if],
   ["while", TType._while],
@@ -76,7 +66,7 @@ const tfKeywords = new Map([
   ["len", TType.len],
 ]);
 
-function tfTokenize(source) {
+function tokenize(source) {
   let current = 0;
   let start = 0;
   const tokens = [];
@@ -178,7 +168,7 @@ function tfTokenize(source) {
             current++;
           let str = source.substring(start, current);
           let type = TType.id;
-          if (tfKeywords.has(str)) type = tfKeywords.get(str);
+          if (Keywords.has(str)) type = Keywords.get(str);
           pushToken(type);
         } else if (isDigit(char)) {
           // number literal.
@@ -580,6 +570,6 @@ class IRCompiler {
 }
 
 module.exports = {
-  tokenize: tfTokenize,
+  tokenize: tokenize,
   IRCompiler: IRCompiler,
 };
